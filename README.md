@@ -103,9 +103,10 @@ Private Sub UpdateEnvironmentalData()
     Dim newLightLevel As Integer = 128
     
     ' Use the generated methods to raise events
-    MyEvents.RaiseEvent_TemperatureChanged(newTemp)
-    MyEvents.RaiseEvent_HumidityChanged(newHumidity)
-    MyEvents.RaiseEvent_LightLevelChanged(newLightLevel)
+    ' Note: Module names in VB.NET can be usually omitted.
+    RaiseEvent_TemperatureChanged(newTemp)
+    RaiseEvent_HumidityChanged(newHumidity)
+    RaiseEvent_LightLevelChanged(newLightLevel)
 End Sub
 ```
 
