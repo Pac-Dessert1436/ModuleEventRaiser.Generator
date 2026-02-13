@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>ModuleEventRaiser.Generator</RootNamespace>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic" Version="4.8.0"
+      PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
