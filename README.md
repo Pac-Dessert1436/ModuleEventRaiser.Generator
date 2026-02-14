@@ -46,8 +46,8 @@
 ### Input: VB.NET Module with Events
 ```vb
 Partial Public Module MyEvents
-    Public Event TemperatureChanged(temperature As Single)
-    Public Event HumidityChanged(humidity As Single)
+    Public Event TemperatureChanged(temperature As Double)
+    Public Event HumidityChanged(humidity As Double)
     Public Event LightLevelChanged(lightLevel As Integer)
 End Module
 ```
@@ -71,7 +71,7 @@ Partial Public Module MyEvents
     ''' Raises the TemperatureChanged event.
     ''' </summary>
     ''' <param name="temperature">The temperature parameter.</param>
-    Public Sub RaiseEvent_TemperatureChanged(temperature As Single)
+    Public Sub RaiseEvent_TemperatureChanged(temperature As Double)
         RaiseEvent TemperatureChanged(temperature)
     End Sub
 
@@ -79,7 +79,7 @@ Partial Public Module MyEvents
     ''' Raises the HumidityChanged event.
     ''' </summary>
     ''' <param name="humidity">The humidity parameter.</param>
-    Public Sub RaiseEvent_HumidityChanged(humidity As Single)
+    Public Sub RaiseEvent_HumidityChanged(humidity As Double)
         RaiseEvent HumidityChanged(humidity)
     End Sub
 
@@ -98,8 +98,8 @@ End Module
 ```vb
 ' In another part of your code (e.g. a class that needs to raise events)
 Private Sub UpdateEnvironmentalData()
-    Dim newTemp As Single = 25.3F
-    Dim newHumidity As Single = 75.6F
+    Dim newTemp As Double = 25.3
+    Dim newHumidity As Double = 75.6
     Dim newLightLevel As Integer = 128
     
     ' Use the generated methods to raise events
