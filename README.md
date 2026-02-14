@@ -6,29 +6,9 @@
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
 - The generator includes `Imports System` by default in generated files.
-- If you need additional imports for your event types, you can add them using the `AddSourceGenImport` method in the `Settings` module (see the example below).
-
-## The `Settings` Module
-The generator includes a `Settings` module that allows you to add additional namespaces to be imported in the generated files:
-
-### Usage Example
-```vb
-' Add an import for a custom namespace
-Settings.AddSourceGenImport("MyCustomNamespace")
-
-' Add multiple imports
-Settings.AddSourceGenImport("System.Collections.Generic")
-Settings.AddSourceGenImport("MyProject.CustomTypes")
-
-' Clear all imports (if needed)
-' Settings.ClearSourceGenImports()
-```
-
-### Available Methods
-- `AddSourceGenImport(namespace As String)`: Adds a namespace to the list of imports
-- `ClearSourceGenImports()`: Clears all previously added imports
-
-These imports will be included in all generated event raiser files, ensuring that any custom types used in your events are properly recognized.
+- Additional imports for custom types any now properly recognized - no other settings required.
+  - e.g. `Public Event CollidePoint(rect As RectangleF, point As Vector2)` (in VB.NET MonoGame projects)
+  - This will include `Imports Microsoft.Xna.Framework` in the generated source file. 
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
@@ -153,7 +133,7 @@ The generator supports:
 - **XML Documentation**: Each generated method includes summary and parameter documentation
 - **Option Statements**: Includes `Option Explicit On` and `Option Strict On`
 - **Auto-Generated Header**: Clearly marks generated code with a header
-- **Imports Section**: Includes `Imports System` by default and any additional imports added through the `Settings` module
+- **Imports Section**: Includes `Imports System` by default. Any custom types used in module events are now recognized by the source generator.
 - **Well-Formatted Code**: Proper indentation and spacing for readability
 
 ## Benefits
