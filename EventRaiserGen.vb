@@ -1,35 +1,32 @@
 Imports Microsoft.CodeAnalysis
 Imports Microsoft.CodeAnalysis.Text
+Imports Microsoft.CodeAnalysis.VisualBasic
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Imports IGIC = Microsoft.CodeAnalysis.IncrementalGeneratorInitializationContext
-
-Public Module Settings
-    Friend ReadOnly sourceGenImports As New List(Of String)
-
-    Public Sub AddSourceGenImport([namespace] As String)
-        sourceGenImports.Add([namespace])
-    End Sub
-
-    Public Sub ClearSourceGenImports()
-        sourceGenImports.Clear()
-    End Sub
-End Module
 
 <Generator(LanguageNames.VisualBasic, LanguageNames.CSharp)>
 Public NotInheritable Class EventRaiserGen
     Implements IIncrementalGenerator
+
+    Private Class ModuleInfo
+        Public Property ModuleName As String
+        Public Property Events As List(Of EventInfo)
+        Public Property RequiredNamespaces As List(Of String)
+    End Class
 
     Private Class EventInfo
         Public Property EventName As String
         Public Property ModuleName As String
         Public Property EventType As String
         Public Property Parameters As List(Of ParameterInfo)
+        Public Property RequiredNamespaces As HashSet(Of String)
         Public Property Location As Location
     End Class
 
     Private Class ParameterInfo
         Public Property Name As String
         Public Property Type As String
+        Public Property ContainingNamespace As String
     End Class
 
     Public Sub Initialize(context As IGIC) Implements IIncrementalGenerator.Initialize
@@ -48,6 +45,7 @@ Public NotInheritable Class EventRaiserGen
             End Function,
             Function(gsc, token)
                 Dim eventDecl = DirectCast(gsc.Node, EventStatementSyntax)
+                Dim semanticModel = gsc.SemanticModel
 
                 ' Find the containing module using FirstAncestorOrSelf
                 Dim moduleBlock = eventDecl.FirstAncestorOrSelf(Of ModuleBlockSyntax)()
@@ -56,12 +54,24 @@ Public NotInheritable Class EventRaiserGen
                 ' Return nothing if not in a module (should be filtered out by predicate)
                 If moduleStatement Is Nothing Then Return Nothing
 
+                ' Get event parameters with namespace information
+                Dim parameters = GetEventParameters(eventDecl, semanticModel)
+                
+                ' Collect all required namespaces from parameter types
+                Dim requiredNamespaces = New HashSet(Of String)()
+                For Each param In parameters
+                    If Not String.IsNullOrEmpty(param.ContainingNamespace) Then
+                        requiredNamespaces.Add(param.ContainingNamespace)
+                    End If
+                Next
+
                 Return New EventInfo With {
                     .EventName = eventDecl.Identifier.ValueText,
                     .ModuleName = moduleStatement.Identifier.ValueText,
                     .EventType = If(eventDecl.AsClause IsNot Nothing,
                         eventDecl.AsClause.Type.ToString(), "EventHandler"),
-                    .Parameters = GetEventParameters(eventDecl),
+                    .Parameters = parameters,
+                    .RequiredNamespaces = requiredNamespaces,
                     .Location = moduleStatement.GetLocation()
                 }
             End Function
@@ -70,48 +80,92 @@ Public NotInheritable Class EventRaiserGen
         ' Filter out any null values from the provider
         Dim filteredEvents = syntaxProvider.Where(Function(e) e IsNot Nothing)
 
-        ' Group events by module name
+        ' Group events by module name and merge namespaces
         Dim groupedByModule = filteredEvents.Collect().
-            Select(Function(events, token) events.GroupBy(Function(e) e.ModuleName))
+            Select(Function(events, token) 
+                       ' Group by module name
+                       Dim moduleGroups = events.GroupBy(Function(e) e.ModuleName)
+                       
+                       ' For each module, merge the required namespaces from all events
+                       Return moduleGroups.Select(Function(group)
+                           Dim moduleName = group.Key
+                           Dim eventsInModule = group.ToList()
+                           
+                           ' Merge all namespaces from all events in this module
+                           Dim allNamespaces = New HashSet(Of String)()
+                           For Each evt In eventsInModule
+                               If evt.RequiredNamespaces IsNot Nothing Then
+                                   allNamespaces.UnionWith(evt.RequiredNamespaces)
+                               End If
+                           Next
+                           
+                           Return New ModuleInfo With {
+                               .ModuleName = moduleName,
+                               .Events = eventsInModule,
+                               .RequiredNamespaces = allNamespaces.ToList()
+                           }
+                       End Function).ToList()
+                   End Function)
 
         ' Register the source output
         context.RegisterSourceOutput(groupedByModule,
-            Sub(sourceContext, moduleGroups)
-                For Each modGroup As IGrouping(Of String, EventInfo) In moduleGroups
-                    Dim moduleName = modGroup.Key
-                    Dim eventsInModule = modGroup.ToList()
-
+            Sub(sourceContext, moduleInfos)
+                For Each moduleInfo As ModuleInfo In moduleInfos
                     ' Generate a single file for this module with all event raisers
-                    Dim sourceCode = GenerateModuleRaiseMethods(moduleName, eventsInModule)
-                    Dim fileName = $"{moduleName}_EventRaisers.g.vb"
+                    Dim sourceCode = GenerateModuleRaiseMethods(moduleInfo)
+                    Dim fileName = $"{moduleInfo.ModuleName}_EventRaisers.g.vb"
 
                     sourceContext.AddSource(
                         fileName, SourceText.From(sourceCode, System.Text.Encoding.UTF8))
-                Next modGroup
+                Next
             End Sub)
     End Sub
 
-    Private Shared Function GetEventParameters(eventDecl As EventStatementSyntax) As List(Of ParameterInfo)
+    Private Shared Function GetEventParameters(
+        eventDecl As EventStatementSyntax, 
+        semanticModel As SemanticModel) As List(Of ParameterInfo)
+        
         Dim parameters As New List(Of ParameterInfo)
 
         If eventDecl.ParameterList IsNot Nothing Then
             For Each paramSyntax In eventDecl.ParameterList.Parameters
-                ' Handle parameter with or without AsClause
-                Dim paramType = If(paramSyntax.AsClause IsNot Nothing,
-                                   paramSyntax.AsClause.Type.ToString(),
-                                   "Object") ' Default to Object if no type specified
+                Dim paramName = paramSyntax.Identifier.Identifier.ValueText
+                Dim paramTypeName = "Object"
+                Dim containingNamespace = ""
+                
+                ' Try to get type information from the semantic model
+                If paramSyntax.AsClause IsNot Nothing Then
+                    paramTypeName = paramSyntax.AsClause.Type.ToString()
+                    
+                    ' Get the symbol for the type to find its namespace
+                    Dim typeInfo = semanticModel.GetTypeInfo(paramSyntax.AsClause.Type)
+                    If typeInfo.Type IsNot Nothing Then
+                        Dim typeSymbol = typeInfo.Type
+                        
+                        ' Get the containing namespace
+                        Dim namespaceSymbol = typeSymbol.ContainingNamespace
+                        If namespaceSymbol IsNot Nothing AndAlso 
+                           Not namespaceSymbol.IsGlobalNamespace Then
+                            containingNamespace = namespaceSymbol.ToDisplayString()
+                        End If
+                        
+                        ' Use the fully qualified type name to ensure correct imports
+                        paramTypeName = typeSymbol.ToDisplayString()
+                    End If
+                End If
 
                 parameters.Add(New ParameterInfo With {
-                    .Name = paramSyntax.Identifier.Identifier.ValueText,
-                    .Type = paramType
+                    .Name = paramName,
+                    .Type = paramTypeName,
+                    .ContainingNamespace = containingNamespace
                 })
-            Next paramSyntax
+            Next
         End If
 
         Return parameters
     End Function
 
-    Private Shared Function GenerateModuleRaiseMethods(moduleName As String, events As List(Of EventInfo)) As String
+    Private Shared Function GenerateModuleRaiseMethods(moduleInfo As ModuleInfo) As String
         Dim code As New System.Text.StringBuilder
 
         ' Add file header
@@ -124,33 +178,43 @@ Public NotInheritable Class EventRaiserGen
         code.AppendLine("Option Explicit On")
         code.AppendLine("Option Strict On")
         code.AppendLine()
+        
+        ' Add System import
         code.AppendLine("Imports System")
-        For Each sgi As String In sourceGenImports
-            code.AppendLine($"Imports {sgi}")
-        Next sgi
+        
+        ' Add collected namespaces (sorted for consistency)
+        If moduleInfo.RequiredNamespaces IsNot Nothing AndAlso 
+           moduleInfo.RequiredNamespaces.Count > 0 Then
+            For Each ns In moduleInfo.RequiredNamespaces.OrderBy(Function(x) x)
+                code.AppendLine($"Imports {ns}")
+            Next
+        End If
         code.AppendLine()
 
         ' Begin module
-        code.AppendLine($"Partial Public Module {moduleName}")
+        code.AppendLine($"Partial Public Module {moduleInfo.ModuleName}")
         code.AppendLine()
 
         ' Generate raise methods for each event in this module
-        For Each evtInfo As EventInfo In events
+        For Each evtInfo As EventInfo In moduleInfo.Events
             ' Skip if event name is empty
             If String.IsNullOrWhiteSpace(evtInfo.EventName) Then Continue For
 
-            ' Build parameter list for the raise method
+            ' Build parameter list for the raise method using simple type names
+            ' (since we have imports for the namespaces)
             Dim paramList As New List(Of String)
             For Each pInfo As ParameterInfo In evtInfo.Parameters
-                paramList.Add($"{pInfo.Name} As {pInfo.Type}")
-            Next pInfo
+                ' Extract just the type name without namespace
+                Dim simpleTypeName = GetSimpleTypeName(pInfo.Type)
+                paramList.Add($"{pInfo.Name} As {simpleTypeName}")
+            Next
             Dim params = String.Join(", ", paramList)
 
             ' Build argument list for RaiseEvent
             Dim argList As New List(Of String)
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 argList.Add(pInfo.Name)
-            Next pInfo
+            Next
             Dim args = String.Join(", ", argList)
 
             ' Generate the raise method
@@ -161,17 +225,27 @@ Public NotInheritable Class EventRaiserGen
             ' Add parameter documentation
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.Name}"">The {pInfo.Name} parameter.</param>")
-            Next pInfo
+            Next
 
             code.AppendLine($"    Public Sub RaiseEvent_{evtInfo.EventName}({params})")
             code.AppendLine($"        RaiseEvent {evtInfo.EventName}({args})")
             code.AppendLine($"    End Sub")
             code.AppendLine()
-        Next evtInfo
+        Next
 
         ' End module
         code.AppendLine("End Module")
 
         Return code.ToString()
+    End Function
+    
+    Private Shared Function GetSimpleTypeName(fullyQualifiedTypeName As String) As String
+        ' Extract the simple name from a fully qualified type name
+        ' e.g., "Microsoft.Xna.Framework.RectangleF" -> "RectangleF"
+        Dim lastDotIndex = fullyQualifiedTypeName.LastIndexOf("."c)
+        If lastDotIndex > -1 AndAlso lastDotIndex < fullyQualifiedTypeName.Length - 1 Then
+            Return fullyQualifiedTypeName.Substring(lastDotIndex + 1)
+        End If
+        Return fullyQualifiedTypeName
     End Function
 End Class
