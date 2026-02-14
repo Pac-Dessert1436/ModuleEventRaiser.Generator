@@ -5,7 +5,30 @@
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
-- The generator includes `Imports System` by default in generated files. If you need additional imports for your event types, you can add them to the generated files within the placeholder region provided.
+- The generator includes `Imports System` by default in generated files.
+- If you need additional imports for your event types, you can add them using the `AddSourceGenImport` method in the `Settings` module (see the example below).
+
+## The `Settings` Module
+The generator includes a `Settings` module that allows you to add additional namespaces to be imported in the generated files:
+
+### Usage Example
+```vb
+' Add an import for a custom namespace
+Settings.AddSourceGenImport("MyCustomNamespace")
+
+' Add multiple imports
+Settings.AddSourceGenImport("System.Collections.Generic")
+Settings.AddSourceGenImport("MyProject.CustomTypes")
+
+' Clear all imports (if needed)
+' Settings.ClearSourceGenImports()
+```
+
+### Available Methods
+- `AddSourceGenImport(namespace As String)`: Adds a namespace to the list of imports
+- `ClearSourceGenImports()`: Clears all previously added imports
+
+These imports will be included in all generated event raiser files, ensuring that any custom types used in your events are properly recognized.
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
@@ -15,6 +38,7 @@
 - **Partial Classes**: Uses partial modules to seamlessly integrate with existing code
 - **Incremental Generation**: Uses the latest incremental generator pattern for fast builds
 - **Separate Generated Files**: Creates dedicated generated files for each module
+- **Import Management**: Provides a `Settings` module to easily add additional namespaces to generated files
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -46,8 +70,8 @@
 ### Input: VB.NET Module with Events
 ```vb
 Partial Public Module MyEvents
-    Public Event TemperatureChanged(temperature As Double)
-    Public Event HumidityChanged(humidity As Double)
+    Public Event TemperatureChanged(temperature As Integer)
+    Public Event HumidityChanged(humidity As Integer)
     Public Event LightLevelChanged(lightLevel As Integer)
 End Module
 ```
@@ -64,6 +88,7 @@ Option Explicit On
 Option Strict On
 
 Imports System
+' Additional imports added through Settings module would appear here
 
 Partial Public Module MyEvents
 
@@ -71,7 +96,7 @@ Partial Public Module MyEvents
     ''' Raises the TemperatureChanged event.
     ''' </summary>
     ''' <param name="temperature">The temperature parameter.</param>
-    Public Sub RaiseEvent_TemperatureChanged(temperature As Double)
+    Public Sub RaiseEvent_TemperatureChanged(temperature As Integer)
         RaiseEvent TemperatureChanged(temperature)
     End Sub
 
@@ -79,7 +104,7 @@ Partial Public Module MyEvents
     ''' Raises the HumidityChanged event.
     ''' </summary>
     ''' <param name="humidity">The humidity parameter.</param>
-    Public Sub RaiseEvent_HumidityChanged(humidity As Double)
+    Public Sub RaiseEvent_HumidityChanged(humidity As Integer)
         RaiseEvent HumidityChanged(humidity)
     End Sub
 
@@ -98,15 +123,14 @@ End Module
 ```vb
 ' In another part of your code (e.g. a class that needs to raise events)
 Private Sub UpdateEnvironmentalData()
-    Dim newTemp As Double = 25.3
-    Dim newHumidity As Double = 75.6
-    Dim newLightLevel As Integer = 128
+    Dim newTemp As Integer = 25
+    Dim newHumidity As Integer = 60
+    Dim newLightLevel As Integer = 80
     
     ' Use the generated methods to raise events
-    ' Note: Module names in VB.NET can be usually omitted.
-    RaiseEvent_TemperatureChanged(newTemp)
-    RaiseEvent_HumidityChanged(newHumidity)
-    RaiseEvent_LightLevelChanged(newLightLevel)
+    MyEvents.RaiseEvent_TemperatureChanged(newTemp)
+    MyEvents.RaiseEvent_HumidityChanged(newHumidity)
+    MyEvents.RaiseEvent_LightLevelChanged(newLightLevel)
 End Sub
 ```
 
@@ -129,7 +153,7 @@ The generator supports:
 - **XML Documentation**: Each generated method includes summary and parameter documentation
 - **Option Statements**: Includes `Option Explicit On` and `Option Strict On`
 - **Auto-Generated Header**: Clearly marks generated code with a header
-- **Imports Section**: Includes `Imports System` by default and contains a placeholder region (`#Region "ToDo: Add other required imports once the compilation error occurs"`) where you can add other necessary imports if compilation errors occur
+- **Imports Section**: Includes `Imports System` by default and any additional imports added through the `Settings` module
 - **Well-Formatted Code**: Proper indentation and spacing for readability
 
 ## Benefits

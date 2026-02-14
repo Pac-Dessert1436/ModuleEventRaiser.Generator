@@ -3,6 +3,18 @@ Imports Microsoft.CodeAnalysis.Text
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Imports IGIC = Microsoft.CodeAnalysis.IncrementalGeneratorInitializationContext
 
+Public Module Settings
+    Friend ReadOnly sourceGenImports As New List(Of String)
+
+    Public Sub AddSourceGenImport([namespace] As String)
+        sourceGenImports.Add([namespace])
+    End Sub
+
+    Public Sub ClearSourceGenImports()
+        sourceGenImports.Clear()
+    End Sub
+End Module
+
 <Generator(LanguageNames.VisualBasic, LanguageNames.CSharp)>
 Public NotInheritable Class EventRaiserGen
     Implements IIncrementalGenerator
@@ -36,11 +48,11 @@ Public NotInheritable Class EventRaiserGen
             End Function,
             Function(gsc, token)
                 Dim eventDecl = DirectCast(gsc.Node, EventStatementSyntax)
-                
+
                 ' Find the containing module using FirstAncestorOrSelf
                 Dim moduleBlock = eventDecl.FirstAncestorOrSelf(Of ModuleBlockSyntax)()
                 Dim moduleStatement = moduleBlock?.BlockStatement
-                
+
                 ' Return nothing if not in a module (should be filtered out by predicate)
                 If moduleStatement Is Nothing Then Return Nothing
 
@@ -112,9 +124,10 @@ Public NotInheritable Class EventRaiserGen
         code.AppendLine("Option Explicit On")
         code.AppendLine("Option Strict On")
         code.AppendLine()
-#Region "ToDo: Add other required imports when necessary"
         code.AppendLine("Imports System")
-#End Region
+        For Each sgi As String In sourceGenImports
+            code.AppendLine($"Imports {sgi}")
+        Next sgi
         code.AppendLine()
 
         ' Begin module
