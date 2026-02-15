@@ -3,19 +3,21 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.0.9`. _Note that version 1.0.10 is identical to 1.0.9 in functionality except for documentation changes, so you do **not** need to upgrade if you are already using 1.0.9._
+
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
 - The generator includes `Imports System` by default in generated files.
 - Additional imports for custom types any now properly recognized - no other settings required.
   - e.g. `Public Event CollidePoint(rect As RectangleF, point As Vector2)` (in VB.NET MonoGame projects)
-  - This will include `Imports Microsoft.Xna.Framework` in the generated source file. 
+  - This will include `Imports Microsoft.Xna.Framework` in the generated source file.
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
 - **Well-Documented**: Includes XML documentation for all generated methods
 - **Parameter Handling**: Correctly handles event parameters with proper types
 - **Custom Event Types**: Supports both standard `EventHandler` and custom event types
-- **Partial Classes**: Uses partial modules to seamlessly integrate with existing code
+- **Partial Modules**: Uses partial modules to seamlessly integrate with existing code
 - **Incremental Generation**: Uses the latest incremental generator pattern for fast builds
 - **Async Raiser Support**: Generates asynchronous raise methods for all partial module events
 
@@ -43,6 +45,11 @@
             OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
     ```
+4. You can also **install the source generator via NuGet** - no manual configuration required:
+   ```bash
+   dotnet add package ModuleEventRaiser.Generator --version 1.0.9
+   ```
+   - Version 1.0.10 is **identical** to 1.0.9 in functionality except for documentation changes.
 
 ## Example Usage
 
@@ -95,6 +102,18 @@ Partial Public Module MyEvents
         RaiseEvent LightLevelChanged(lightLevel)
     End Sub
 
+#Region "New in version 1.0.9+" 
+    ''' <summary>
+    ''' Asynchronously raises the TemperatureChanged event.
+    ''' </summary>
+    ''' <param name="temperature">The temperature parameter.</param>
+    Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Integer) As Task
+        Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
+    End Function
+
+    ' NOTE: Asynchronous raise methods for other events would be similar to the above
+#End Region
+
 End Module
 ```
 
@@ -107,9 +126,10 @@ Private Sub UpdateEnvironmentalData()
     Dim newLightLevel As Integer = 80
     
     ' Use the generated methods to raise events
-    MyEvents.RaiseEvent_TemperatureChanged(newTemp)
-    MyEvents.RaiseEvent_HumidityChanged(newHumidity)
-    MyEvents.RaiseEvent_LightLevelChanged(newLightLevel)
+    ' NOTE: Module names in VB.NET can be usually omitted
+    RaiseEvent_TemperatureChanged(newTemp)
+    RaiseEvent_HumidityChanged(newHumidity)
+    RaiseEvent_LightLevelChanged(newLightLevel)
 End Sub
 ```
 
