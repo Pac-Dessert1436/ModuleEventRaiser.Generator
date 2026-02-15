@@ -17,8 +17,7 @@
 - **Custom Event Types**: Supports both standard `EventHandler` and custom event types
 - **Partial Classes**: Uses partial modules to seamlessly integrate with existing code
 - **Incremental Generation**: Uses the latest incremental generator pattern for fast builds
-- **Separate Generated Files**: Creates dedicated generated files for each module
-- **Import Management**: Provides a `Settings` module to easily add additional namespaces to generated files
+- **Async Raiser Support**: Generates asynchronous raise methods for all partial module events
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)

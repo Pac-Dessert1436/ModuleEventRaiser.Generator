@@ -230,10 +230,23 @@ Public NotInheritable Class EventRaiserGen
             code.AppendLine($"        RaiseEvent {evtInfo.EventName}({args})")
             code.AppendLine($"    End Sub")
             code.AppendLine()
+
+            ' Generate async raise method (same as sync raise method)
+            code.AppendLine($"    ''' <summary>")
+            code.AppendLine($"    ''' Asynchronously raises the {evtInfo.EventName} event.")
+            code.AppendLine($"    ''' </summary>")
+            For Each pInfo As ParameterInfo In evtInfo.Parameters
+                code.AppendLine($"    ''' <param name=""{pInfo.Name}"">The {pInfo.Name} parameter.</param>")
+            Next pInfo
+            code.AppendLine($"    ''' <returns>A task representing the asynchronous operation.</returns>")
+            code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}) As Task")
+            code.AppendLine($"        Await Task.Run(Sub() RaiseEvent {evtInfo.EventName}({args}))")
+            code.AppendLine($"    End Function")
+            code.AppendLine()
         Next evtInfo
 
-        ' End module
-        code.Append("End Module")
+        ' End module with proper newline (POSIX standard)
+        code.AppendLine("End Module")
 
         Return code.ToString()
     End Function
