@@ -4,7 +4,7 @@ Imports Microsoft.CodeAnalysis.VisualBasic
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Imports IGIC = Microsoft.CodeAnalysis.IncrementalGeneratorInitializationContext
 
-<Generator(LanguageNames.VisualBasic, LanguageNames.CSharp)>
+<Generator(LanguageNames.VisualBasic)>
 Public NotInheritable Class EventRaiserGen
     Implements IIncrementalGenerator
 
@@ -56,10 +56,10 @@ Public NotInheritable Class EventRaiserGen
 
                 ' Get event parameters with namespace information
                 Dim parameters = GetEventParameters(eventDecl, semanticModel)
-                
+
                 ' Collect all required namespaces from parameter types
-                Dim requiredNamespaces = New HashSet(Of String)()
-                For Each param In parameters
+                Dim requiredNamespaces As New HashSet(Of String)
+                For Each param As ParameterInfo In parameters
                     If Not String.IsNullOrEmpty(param.ContainingNamespace) Then
                         requiredNamespaces.Add(param.ContainingNamespace)
                     End If
@@ -110,23 +110,21 @@ Public NotInheritable Class EventRaiserGen
         ' Register the source output
         context.RegisterSourceOutput(groupedByModule,
             Sub(sourceContext, moduleInfos)
-                For Each moduleInfo As ModuleInfo In moduleInfos
+                For Each modInfo As ModuleInfo In moduleInfos
                     ' Generate a single file for this module with all event raisers
-                    Dim sourceCode = GenerateModuleRaiseMethods(moduleInfo)
-                    Dim fileName = $"{moduleInfo.ModuleName}_EventRaisers.g.vb"
+                    Dim sourceCode = GenerateModuleRaiseMethods(modInfo)
+                    Dim fileName = $"{modInfo.ModuleName}_EventRaisers.g.vb"
 
                     sourceContext.AddSource(
                         fileName, SourceText.From(sourceCode, System.Text.Encoding.UTF8))
-                Next moduleInfo
+                Next modInfo
             End Sub)
     End Sub
 
-    Private Shared Function GetEventParameters(
-        eventDecl As EventStatementSyntax,
-        semanticModel As SemanticModel) As List(Of ParameterInfo)
+    Private Shared Function GetEventParameters _
+        (eventDecl As EventStatementSyntax, semanticModel As SemanticModel) As List(Of ParameterInfo)
 
         Dim parameters As New List(Of ParameterInfo)
-
         If eventDecl.ParameterList IsNot Nothing Then
             For Each paramSyntax In eventDecl.ParameterList.Parameters
                 Dim paramName = paramSyntax.Identifier.Identifier.ValueText
@@ -145,7 +143,7 @@ Public NotInheritable Class EventRaiserGen
                         ' Get the containing namespace
                         Dim namespaceSymbol = typeSymbol.ContainingNamespace
                         If namespaceSymbol IsNot Nothing AndAlso
-                           Not namespaceSymbol.IsGlobalNamespace Then
+                            Not namespaceSymbol.IsGlobalNamespace Then
                             containingNamespace = namespaceSymbol.ToDisplayString()
                         End If
 
@@ -182,7 +180,7 @@ Public NotInheritable Class EventRaiserGen
         Dim namespaces = moduleInfo.RequiredNamespaces
         ' Add collected namespaces (sorted for consistency)
         If namespaces IsNot Nothing AndAlso namespaces.Count > 0 Then
-            For Each ns In namespaces.OrderBy(Function(x) x)
+            For Each ns As String In namespaces.OrderBy(Function(x) x)
                 code.AppendLine($"Imports {ns}")
             Next ns
         End If
@@ -200,8 +198,8 @@ Public NotInheritable Class EventRaiserGen
             ' Build parameter list for the raise method
             Dim paramList As New List(Of String)
             For Each pInfo As ParameterInfo In evtInfo.Parameters
-                Dim typeName As String = pInfo.Type
-                For Each ns In namespaces
+                Dim typeName = pInfo.Type
+                For Each ns As String In namespaces
                     If pInfo.Type.StartsWith(ns) Then
                         typeName = pInfo.Type.Substring(ns.Length + 1)
                         Exit For
@@ -235,7 +233,7 @@ Public NotInheritable Class EventRaiserGen
         Next evtInfo
 
         ' End module
-        code.AppendLine("End Module")
+        code.Append("End Module")
 
         Return code.ToString()
     End Function
