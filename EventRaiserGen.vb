@@ -24,8 +24,8 @@ Public NotInheritable Class EventRaiserGen
     End Class
 
     Private Class ParameterInfo
-        Public Property Name As String
-        Public Property Type As String
+        Public Property ParamName As String
+        Public Property ParamType As String
         Public Property ContainingNamespace As String
     End Class
 
@@ -59,11 +59,11 @@ Public NotInheritable Class EventRaiserGen
 
                 ' Collect all required namespaces from parameter types
                 Dim requiredNamespaces As New HashSet(Of String)
-                For Each param As ParameterInfo In parameters
-                    If Not String.IsNullOrEmpty(param.ContainingNamespace) Then
-                        requiredNamespaces.Add(param.ContainingNamespace)
+                For Each pInfo As ParameterInfo In parameters
+                    If Not String.IsNullOrEmpty(pInfo.ContainingNamespace) Then
+                        requiredNamespaces.Add(pInfo.ContainingNamespace)
                     End If
-                Next param
+                Next pInfo
 
                 Return New EventInfo With {
                     .EventName = eventDecl.Identifier.ValueText,
@@ -129,7 +129,7 @@ Public NotInheritable Class EventRaiserGen
             For Each paramSyntax In eventDecl.ParameterList.Parameters
                 Dim paramName = paramSyntax.Identifier.Identifier.ValueText
                 Dim paramTypeName = "Object"
-                Dim containingNamespace = ""
+                Dim containingNamespace = String.Empty
 
                 ' Try to get type information from the semantic model
                 If paramSyntax.AsClause IsNot Nothing Then
@@ -153,8 +153,8 @@ Public NotInheritable Class EventRaiserGen
                 End If
 
                 parameters.Add(New ParameterInfo With {
-                    .Name = paramName,
-                    .Type = paramTypeName,
+                    .ParamName = paramName,
+                    .ParamType = paramTypeName,
                     .ContainingNamespace = containingNamespace
                 })
             Next paramSyntax
@@ -198,21 +198,21 @@ Public NotInheritable Class EventRaiserGen
             ' Build parameter list for the raise method
             Dim paramList As New List(Of String)
             For Each pInfo As ParameterInfo In evtInfo.Parameters
-                Dim typeName = pInfo.Type
+                Dim pTypeName = pInfo.ParamType
                 For Each ns As String In namespaces
-                    If pInfo.Type.StartsWith(ns) Then
-                        typeName = pInfo.Type.Substring(ns.Length + 1)
+                    If pInfo.ParamType.StartsWith(ns) Then
+                        pTypeName = pInfo.ParamType.Substring(ns.Length + 1)
                         Exit For
                     End If
                 Next ns
-                paramList.Add($"{pInfo.Name} As {typeName}")
+                paramList.Add($"{pInfo.ParamName} As {pTypeName}")
             Next pInfo
             Dim params = String.Join(", ", paramList)
 
             ' Build argument list for RaiseEvent
             Dim argList As New List(Of String)
             For Each pInfo As ParameterInfo In evtInfo.Parameters
-                argList.Add(pInfo.Name)
+                argList.Add(pInfo.ParamName)
             Next pInfo
             Dim args = String.Join(", ", argList)
 
@@ -223,7 +223,7 @@ Public NotInheritable Class EventRaiserGen
 
             ' Add parameter documentation
             For Each pInfo As ParameterInfo In evtInfo.Parameters
-                code.AppendLine($"    ''' <param name=""{pInfo.Name}"">The {pInfo.Name} parameter.</param>")
+                code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">The {pInfo.ParamName} parameter.</param>")
             Next pInfo
 
             code.AppendLine($"    Public Sub RaiseEvent_{evtInfo.EventName}({params})")
@@ -236,7 +236,7 @@ Public NotInheritable Class EventRaiserGen
             code.AppendLine($"    ''' Asynchronously raises the {evtInfo.EventName} event.")
             code.AppendLine($"    ''' </summary>")
             For Each pInfo As ParameterInfo In evtInfo.Parameters
-                code.AppendLine($"    ''' <param name=""{pInfo.Name}"">The {pInfo.Name} parameter.</param>")
+                code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">The {pInfo.ParamName} parameter.</param>")
             Next pInfo
             code.AppendLine($"    ''' <returns>A task representing the asynchronous operation.</returns>")
             code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}) As Task")

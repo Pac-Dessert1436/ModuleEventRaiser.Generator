@@ -3,7 +3,7 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.0.9`. _Note that version 1.0.10 is identical to 1.0.9 in functionality except for documentation changes, so you do **not** need to upgrade if you are already using 1.0.9._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.0.9`. _Note that versions 1.0.10 through 1.0.11 are identical to 1.0.9 in functionality except for documentation changes and/or internal code cleanup, so you do **not** need to upgrade if you are already using 1.0.9._
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -49,7 +49,7 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
    ```bash
    dotnet add package ModuleEventRaiser.Generator --version 1.0.9
    ```
-   - Version 1.0.10 is **identical** to 1.0.9 in functionality except for documentation changes.
+   - Versions 1.0.10 through 1.0.11 are **identical** to 1.0.9 in functionality except for documentation changes and/or internal code cleanup.
 
 ## Example Usage
 
