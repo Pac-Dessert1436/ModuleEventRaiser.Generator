@@ -3,7 +3,7 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.0`. _Note that version 1.1.0 introduces significant new features including event scheduling capabilities for game frameworks like MonoGame and FNA._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.2`. _Note that version 1.1.2 introduces significant new features including event scheduling capabilities for game frameworks like MonoGame and FNA._
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -49,9 +49,9 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.0
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.2
    ```
-   - Version 1.1.0 introduces event scheduling capabilities, making it ideal for game frameworks like MonoGame and FNA.
+   - Version 1.1.2 introduces event scheduling capabilities, making it ideal for game frameworks like MonoGame and FNA.
 
 ## Example Usage
 
@@ -219,7 +219,7 @@ Public Module {moduleInfo.ModuleName}EventScheduler
     ''' <remarks>
     ''' This method is thread-safe and can be called from any thread.
     ''' </remarks>
-    Public ReasOnly Property PendingEventCount As Integer
+    Public ReadOnly Property PendingEventCount As Integer
         Get
             SyncLock _lock
                 Return _pendingEvents.Count
