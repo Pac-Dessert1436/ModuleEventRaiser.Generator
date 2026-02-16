@@ -21,6 +21,8 @@ Public NotInheritable Class EventRaiserGen
         Public Property Parameters As List(Of ParameterInfo)
         Public Property RequiredNamespaces As HashSet(Of String)
         Public Property Location As Location
+        Public Property IsDelegatePattern As Boolean
+        Public Property DelegateTypeName As String
     End Class
 
     Private Class ParameterInfo
@@ -54,16 +56,48 @@ Public NotInheritable Class EventRaiserGen
                 ' Return nothing if not in a module (should be filtered out by predicate)
                 If moduleStatement Is Nothing Then Return Nothing
 
-                ' Get event parameters with namespace information
-                Dim parameters = GetEventParameters(eventDecl, semanticModel)
-
-                ' Collect all required namespaces from parameter types
+                ' Initialize collections
+                Dim parameters As New List(Of ParameterInfo)
                 Dim requiredNamespaces As New HashSet(Of String)
-                For Each pInfo As ParameterInfo In parameters
-                    If Not String.IsNullOrEmpty(pInfo.ContainingNamespace) Then
-                        requiredNamespaces.Add(pInfo.ContainingNamespace)
+                Dim isDelegateEvent = False
+                Dim delegateTypeName = ""
+
+                ' Check if this is a delegate-based event (As SomeDelegate)
+                If eventDecl.AsClause IsNot Nothing Then
+                    ' This is an "As EventHandler" style event
+                    isDelegateEvent = True
+                    delegateTypeName = eventDecl.AsClause.Type.ToString()
+
+                    ' USE the GetParametersFromDelegate function here!
+                    parameters = GetParametersFromDelegate(eventDecl.AsClause.Type, semanticModel)
+
+                    ' Collect namespaces from the extracted parameters
+                    For Each pInfo As ParameterInfo In parameters
+                        If Not String.IsNullOrEmpty(pInfo.ContainingNamespace) Then
+                            requiredNamespaces.Add(pInfo.ContainingNamespace)
+                        End If
+                    Next
+
+                    ' Also add the delegate's namespace if needed
+                    Dim typeInfo = semanticModel.GetTypeInfo(eventDecl.AsClause.Type)
+                    If typeInfo.Type IsNot Nothing Then
+                        Dim delegateNamespace = typeInfo.Type.ContainingNamespace.ToDisplayString()
+                        If Not String.IsNullOrEmpty(delegateNamespace) AndAlso
+               Not delegateNamespace = "System" Then
+                            requiredNamespaces.Add(delegateNamespace)
+                        End If
                     End If
-                Next pInfo
+                Else
+                    ' This is a traditional event with parameter list
+                    parameters = GetEventParameters(eventDecl, semanticModel)
+
+                    ' Collect namespaces from parameters
+                    For Each pInfo As ParameterInfo In parameters
+                        If Not String.IsNullOrEmpty(pInfo.ContainingNamespace) Then
+                            requiredNamespaces.Add(pInfo.ContainingNamespace)
+                        End If
+                    Next
+                End If
 
                 Return New EventInfo With {
                     .EventName = eventDecl.Identifier.ValueText,
@@ -72,7 +106,9 @@ Public NotInheritable Class EventRaiserGen
                         eventDecl.AsClause.Type.ToString(), "EventHandler"),
                     .Parameters = parameters,
                     .RequiredNamespaces = requiredNamespaces,
-                    .Location = moduleStatement.GetLocation()
+                    .Location = moduleStatement.GetLocation(),
+                    .IsDelegatePattern = isDelegateEvent,
+                    .DelegateTypeName = delegateTypeName
                 }
             End Function
         )
@@ -100,10 +136,10 @@ Public NotInheritable Class EventRaiserGen
                                                       Next evt
 
                                                       Return New ModuleInfo With {
-                               .ModuleName = moduleName,
-                               .Events = eventsInModule,
-                               .RequiredNamespaces = allNamespaces.ToList()
-                           }
+                                                          .ModuleName = moduleName,
+                                                          .Events = eventsInModule,
+                                                          .RequiredNamespaces = allNamespaces.ToList()
+                                                      }
                                                   End Function).ToList()
                    End Function)
 
@@ -120,6 +156,59 @@ Public NotInheritable Class EventRaiserGen
                 Next modInfo
             End Sub)
     End Sub
+
+    Private Function GetParametersFromDelegate(
+    delegateTypeSyntax As TypeSyntax,
+    semanticModel As SemanticModel) As List(Of ParameterInfo)
+
+        Dim parameters As New List(Of ParameterInfo)
+        Dim typeInfo = semanticModel.GetTypeInfo(delegateTypeSyntax)
+
+        If typeInfo.Type IsNot Nothing Then
+            Dim delegateSymbol = TryCast(typeInfo.Type, INamedTypeSymbol)
+            If delegateSymbol IsNot Nothing AndAlso delegateSymbol.DelegateInvokeMethod IsNot Nothing Then
+                Dim invokeMethod = delegateSymbol.DelegateInvokeMethod
+
+                For Each param In invokeMethod.Parameters
+                    Dim paramType = param.Type.ToDisplayString()
+                    Dim containingNamespace = param.Type.ContainingNamespace.ToDisplayString()
+
+                    ' Generate a meaningful parameter name
+                    Dim paramName = param.Name
+                    If String.IsNullOrEmpty(paramName) Then
+                        ' Use common naming conventions based on type
+                        paramName = GetDefaultParameterName(param.Type, parameters.Count + 1)
+                    End If
+
+                    parameters.Add(New ParameterInfo With {
+                    .ParamName = paramName,
+                    .ParamType = paramType,
+                    .ContainingNamespace = containingNamespace
+                })
+                Next
+            End If
+        End If
+
+        Return parameters
+    End Function
+
+    Private Function GetDefaultParameterName(typeSymbol As ITypeSymbol, index As Integer) As String
+        ' Common naming conventions
+        Select Case typeSymbol.Name
+            Case "Object", "Object?" : Return "sender"
+            Case "EventArgs", "EventArgs?" : Return "e"
+            Case "String", "String?" : Return "value"
+            Case "Integer", "Integer?" : Return "count"
+            Case "Boolean", "Boolean?" : Return "flag"
+            Case Else
+                ' Use type name with first letter lowercase
+                Dim typeName = typeSymbol.Name
+                If typeName.Length > 0 Then
+                    Return Char.ToLowerInvariant(typeName(0)) & typeName.Substring(1)
+                End If
+                Return $"arg{index}"
+        End Select
+    End Function
 
     Private Shared Function GetEventParameters _
         (eventDecl As EventStatementSyntax, semanticModel As SemanticModel) As List(Of ParameterInfo)
@@ -172,7 +261,7 @@ Public NotInheritable Class EventRaiserGen
                 Select Case True
                     Case pInfo.ParamName = "sender" AndAlso pInfo.ParamType = "Object"
                         Return "The source of the event."
-                    Case pInfo.ParamName = "e" AndAlso pInfo.ParamType = "EventArgs"
+                    Case pInfo.ParamName = "e" AndAlso pInfo.ParamType = "System.EventArgs"
                         Return "An object that contains the event data."
                     Case Else
                         Dim desc As String = pInfo.ParamName
@@ -324,7 +413,7 @@ Public Module {moduleInfo.ModuleName}EventScheduler
     Public Sub RaiseScheduledEvents()
         Dim actionsToRaise = Array.Empty(Of Action)()
         SyncLock _lock
-            If _pendingEvents.Count = 0 Then Return
+            If _pendingEvents.Count = 0 Then Exit Sub
             actionsToRaise = _pendingEvents.ToArray()
             _pendingEvents.Clear()
         End SyncLock

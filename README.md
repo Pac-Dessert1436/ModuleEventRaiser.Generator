@@ -3,7 +3,7 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.2`. _Note that version 1.1.2 introduces significant new features including event scheduling capabilities for game frameworks like MonoGame and FNA._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.3`. _Note that version 1.1.3 introduces delegate pattern support for events defined using explicit delegate types._
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -22,6 +22,7 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 - **Async Raiser Support**: Generates asynchronous `RaiseEventAsync_*` methods for all events
 - **Event Scheduler**: Generates a dedicated `{ModuleName}EventScheduler` module for each event module, allowing events to be scheduled and raised later - ideal for game frameworks like MonoGame and FNA
 - **Automatic Namespace Detection**: Automatically detects and includes required namespaces for event parameter types
+- **Delegate Pattern Support (Version 1.1.3)**: Generates event raiser methods for events defined using delegate pattern (e.g. `Public Event MyEvent As EventHandler`)
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -49,18 +50,24 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.2
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.3
    ```
-   - Version 1.1.2 introduces event scheduling capabilities, making it ideal for game frameworks like MonoGame and FNA.
+   - Version 1.1.3 introduces delegate pattern support, making it compatible with events defined using explicit delegate types.
 
 ## Example Usage
 
 ### Input: VB.NET Module with Events
 ```vb
 Partial Public Module MyEvents
+    ' Standard event pattern (parameterized)
     Public Event TemperatureChanged(temperature As Integer)
     Public Event HumidityChanged(humidity As Integer)
     Public Event LightLevelChanged(lightLevel As Integer)
+    
+    ' Delegate pattern (using explicit delegate types)
+    Public Event MyEvent As EventHandler
+    Public Event CustomEvent As Action(Of String, Integer)
+    Public Event GameEvent As Action(Of GameState)
 End Module
 ```
 
@@ -164,6 +171,20 @@ Partial Public Module MyEvents
         ScheduleEventAction(Sub() RaiseEvent LightLevelChanged(lightLevel))
     End Sub
 
+    ' NEW in 1.1.3: Delegate pattern event raising methods (documentation follows the same pattern)
+    Public Sub RaiseEvent_MyEvent(sender As Object, e As EventArgs)
+        RaiseEvent MyEvent(sender, e)
+    End Sub
+
+    Public Sub RaiseEventAsync_MyEvent(sender As Object, e As EventArgs)
+        Await Task.Run(Sub() RaiseEvent MyEvent(sender, e))
+    End Sub
+
+    Public Sub ScheduleEvent_MyEvent(sender As Object, e As EventArgs)
+        ScheduleEventAction(Sub() RaiseEvent MyEvent(sender, e))
+    End Sub
+
+    ' ... More delegate pattern event raising methods ...
 End Module
 
 ''' <summary>
