@@ -3,7 +3,7 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.0.9`. _Note that versions 1.0.10 through 1.0.11 are identical to 1.0.9 in functionality except for documentation changes and/or internal code cleanup, so you do **not** need to upgrade if you are already using 1.0.9._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.0`. _Note that version 1.1.0 introduces significant new features including event scheduling capabilities for game frameworks like MonoGame and FNA._
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -19,7 +19,9 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 - **Custom Event Types**: Supports both standard `EventHandler` and custom event types
 - **Partial Modules**: Uses partial modules to seamlessly integrate with existing code
 - **Incremental Generation**: Uses the latest incremental generator pattern for fast builds
-- **Async Raiser Support**: Generates asynchronous raise methods for all partial module events
+- **Async Raiser Support**: Generates asynchronous `RaiseEventAsync_*` methods for all events
+- **Event Scheduler**: Generates a dedicated `{ModuleName}EventScheduler` module for each event module, allowing events to be scheduled and raised later - ideal for game frameworks like MonoGame and FNA
+- **Automatic Namespace Detection**: Automatically detects and includes required namespaces for event parameter types
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -47,9 +49,9 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.0.9
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.0
    ```
-   - Versions 1.0.10 through 1.0.11 are **identical** to 1.0.9 in functionality except for documentation changes and/or internal code cleanup.
+   - Version 1.1.0 introduces event scheduling capabilities, making it ideal for game frameworks like MonoGame and FNA.
 
 ## Example Usage
 
@@ -74,50 +76,174 @@ Option Explicit On
 Option Strict On
 
 Imports System
-' Additional imports added through Settings module would appear here
+' Additional imports for custom types will be automatically added here
 
 Partial Public Module MyEvents
 
     ''' <summary>
     ''' Raises the TemperatureChanged event.
     ''' </summary>
-    ''' <param name="temperature">The temperature parameter.</param>
+    ''' <param name="temperature">The temperature parameter to raise the event with.</param>
     Public Sub RaiseEvent_TemperatureChanged(temperature As Integer)
         RaiseEvent TemperatureChanged(temperature)
     End Sub
 
     ''' <summary>
+    ''' Asynchronously raises the TemperatureChanged event. DO NOT USE THIS METHOD IN GAME FRAMEWORKS (MonoGame, FNA, etc.)
+    ''' </summary>
+    ''' <param name="temperature">The temperature parameter to raise the event with.</param>
+    ''' <returns>A task representing the asynchronous operation.</returns>
+    ''' <remarks>
+    ''' For game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_TemperatureChanged' method instead.
+    ''' </remarks>
+    Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Integer) As Task
+        Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
+    End Function
+
+    ''' <summary>
+    ''' Schedules the TemperatureChanged event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).
+    ''' </summary>
+    ''' <param name="temperature">The temperature parameter to raise the event with.</param>
+    Public Sub ScheduleEvent_TemperatureChanged(temperature As Integer)
+        ScheduleEventAction(Sub() RaiseEvent TemperatureChanged(temperature))
+    End Sub
+
+    ''' <summary>
     ''' Raises the HumidityChanged event.
     ''' </summary>
-    ''' <param name="humidity">The humidity parameter.</param>
+    ''' <param name="humidity">The humidity parameter to raise the event with.</param>
     Public Sub RaiseEvent_HumidityChanged(humidity As Integer)
         RaiseEvent HumidityChanged(humidity)
     End Sub
 
     ''' <summary>
+    ''' Asynchronously raises the HumidityChanged event. DO NOT USE THIS METHOD IN GAME FRAMEWORKS (MonoGame, FNA, etc.)
+    ''' </summary>
+    ''' <param name="humidity">The humidity parameter to raise the event with.</param>
+    ''' <returns>A task representing the asynchronous operation.</returns>
+    ''' <remarks>
+    ''' For game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_HumidityChanged' method instead.
+    ''' </remarks>
+    Public Async Function RaiseEventAsync_HumidityChanged(humidity As Integer) As Task
+        Await Task.Run(Sub() RaiseEvent HumidityChanged(humidity))
+    End Function
+
+    ''' <summary>
+    ''' Schedules the HumidityChanged event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).
+    ''' </summary>
+    ''' <param name="humidity">The humidity parameter to raise the event with.</param>
+    Public Sub ScheduleEvent_HumidityChanged(humidity As Integer)
+        ScheduleEventAction(Sub() RaiseEvent HumidityChanged(humidity))
+    End Sub
+
+    ''' <summary>
     ''' Raises the LightLevelChanged event.
     ''' </summary>
-    ''' <param name="lightLevel">The lightLevel parameter.</param>
+    ''' <param name="lightLevel">The light level parameter to raise the event with.</param>
     Public Sub RaiseEvent_LightLevelChanged(lightLevel As Integer)
         RaiseEvent LightLevelChanged(lightLevel)
     End Sub
 
-#Region "New in version 1.0.9+" 
     ''' <summary>
-    ''' Asynchronously raises the TemperatureChanged event.
+    ''' Asynchronously raises the LightLevelChanged event. DO NOT USE THIS METHOD IN GAME FRAMEWORKS (MonoGame, FNA, etc.)
     ''' </summary>
-    ''' <param name="temperature">The temperature parameter.</param>
-    Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Integer) As Task
-        Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
+    ''' <param name="lightLevel">The light level parameter to raise the event with.</param>
+    ''' <returns>A task representing the asynchronous operation.</returns>
+    ''' <remarks>
+    ''' For game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_LightLevelChanged' method instead.
+    ''' </remarks>
+    Public Async Function RaiseEventAsync_LightLevelChanged(lightLevel As Integer) As Task
+        Await Task.Run(Sub() RaiseEvent LightLevelChanged(lightLevel))
     End Function
 
-    ' NOTE: Asynchronous raise methods for other events would be similar to the above
-#End Region
+    ''' <summary>
+    ''' Schedules the LightLevelChanged event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).
+    ''' </summary>
+    ''' <param name="lightLevel">The light level parameter to raise the event with.</param>
+    Public Sub ScheduleEvent_LightLevelChanged(lightLevel As Integer)
+        ScheduleEventAction(Sub() RaiseEvent LightLevelChanged(lightLevel))
+    End Sub
 
+End Module
+
+''' <summary>
+''' Schedules event actions to be raised later. Useful for game frameworks (MonoGame, FNA, etc.) 
+''' where you want to avoid raising events during the update phase.
+''' </summary>
+''' <remarks>
+''' This module provides a thread-safe way to queue events and raise them at a later time,
+''' particularly important in game development to maintain consistent frame rates and avoid
+''' race conditions.
+''' </remarks>
+Public Module {moduleInfo.ModuleName}EventScheduler
+    Private ReadOnly _pendingEvents As New List(Of Action)
+    Private ReadOnly _lock As New Object()
+
+    ''' <summary>
+    ''' Schedules an event action to be raised later.
+    ''' </summary>
+    ''' <param name=""eventAction"">The event action to schedule.</param>
+    ''' <remarks>
+    ''' This method is thread-safe and can be called from any thread.
+    ''' </remarks>
+    Public Sub ScheduleEventAction(eventAction As Action)
+        SyncLock _lock
+            _pendingEvents.Add(eventAction)
+        End SyncLock
+    End Sub
+
+    ''' <summary>
+    ''' Raises all scheduled event actions defined in this module.
+    ''' </summary>
+    ''' <remarks>
+    ''' This method is thread-safe and should be called during a phase where
+    ''' event handling is safe (e.g., during the 'Draw' phase in game frameworks).
+    ''' All scheduled events are raised in the order they were scheduled.
+    ''' </remarks>
+    Public Sub RaiseScheduledEvents()
+        Dim actionsToRaise = Array.Empty(Of Action)()
+        SyncLock _lock
+            If _pendingEvents.Count = 0 Then Return
+            actionsToRaise = _pendingEvents.ToArray()
+            _pendingEvents.Clear()
+        End SyncLock
+
+        ' Raise all events outside the lock to avoid deadlocks
+        Array.ForEach(actionsToRaise, Sub(atn) atn.Invoke())
+    End Sub
+
+    ''' <summary>
+    ''' Gets the number of pending events scheduled to be raised.
+    ''' </summary>
+    ''' <returns>The number of pending events.</returns>
+    ''' <remarks>
+    ''' This method is thread-safe and can be called from any thread.
+    ''' </remarks>
+    Public ReasOnly Property PendingEventCount As Integer
+        Get
+            SyncLock _lock
+                Return _pendingEvents.Count
+            End SyncLock
+        End Get
+    End Function
+
+    ''' <summary>
+    ''' Clears all scheduled events without raising them.
+    ''' </summary>
+    ''' <remarks>
+    ''' This method is thread-safe and can be called from any thread.
+    ''' </remarks>
+    Public Sub ClearScheduledEvents()
+        SyncLock _lock
+            _pendingEvents.Clear()
+        End SyncLock
+    End Sub
 End Module
 ```
 
 ### How to Use the Generated Methods
+
+#### Basic Synchronous Event Raising
 ```vb
 ' In another part of your code (e.g. a class that needs to raise events)
 Private Sub UpdateEnvironmentalData()
@@ -133,13 +259,57 @@ Private Sub UpdateEnvironmentalData()
 End Sub
 ```
 
+#### Asynchronous Event Raising
+```vb
+' Using async/await pattern
+Private Async Function UpdateEnvironmentalDataAsync() As Task
+    Dim newTemp As Integer = 25
+    Dim newHumidity As Integer = 60
+    Dim newLightLevel As Integer = 80
+    
+    ' Use the generated async methods
+    Await RaiseEventAsync_TemperatureChanged(newTemp)
+    Await RaiseEventAsync_HumidityChanged(newHumidity)
+    Await RaiseEventAsync_LightLevelChanged(newLightLevel)
+End Function
+```
+
+#### Scheduled Event Raising (for Game Frameworks)
+```vb
+' In a game framework like MonoGame or FNA
+Private Sub Update(gameTime As GameTime)
+    ' Game logic that determines when to raise events
+    Dim playerScore As Integer = CalculatePlayerScore()
+    Dim enemyCount As Integer = GetEnemyCount()
+    
+    ' Schedule events to be raised later
+    ' These will be queued and can be raised during the render phase
+    ScheduleEvent_ScoreChanged(playerScore)
+    ScheduleEvent_EnemyCountChanged(enemyCount)
+End Sub
+
+' In your game's Draw method or main loop
+Private Sub Draw(gameTime As GameTime)
+    ' Raise all scheduled events before rendering
+    MyEventsEventScheduler.RaiseScheduledEvents()
+    
+    ' Render game graphics
+    ' ...
+End Sub
+```
+
 ## Technical Details
 
 ### How It Works
 1. **Syntax Analysis**: The generator analyzes your VB.NET code to find events declared within modules
 2. **Event Information Collection**: It collects details about each event, including its name, parameters, and containing module
-3. **Code Generation**: For each event, it generates a properly documented `RaiseEvent_*` method
-4. **Output**: The generated code is written to separate files named `{ModuleName}_EventRaisers.g.vb`
+3. **Namespace Detection**: It automatically detects and collects required namespaces for event parameter types
+4. **Code Generation**: For each event, it generates:
+   - A synchronous `RaiseEvent_*` method
+   - An asynchronous `RaiseEventAsync_*` method
+   - A scheduled `ScheduleEvent_*` method
+5. **Event Scheduler Generation**: It creates a dedicated `{ModuleName}EventScheduler` module for each event module
+6. **Output**: The generated code is written to separate files named `{ModuleName}_EventRaisers.g.vb`
 
 ### Supported Event Patterns
 The generator supports:
@@ -147,13 +317,50 @@ The generator supports:
 - Events with custom delegate types
 - Events with any number of parameters
 - Events with different parameter types
+- Events with custom types from external libraries (e.g., MonoGame, FNA)
 
 ### Generated Code Features
 - **XML Documentation**: Each generated method includes summary and parameter documentation
 - **Option Statements**: Includes `Option Explicit On` and `Option Strict On`
 - **Auto-Generated Header**: Clearly marks generated code with a header
-- **Imports Section**: Includes `Imports System` by default. Any custom types used in module events are now recognized by the source generator.
+- **Automatic Imports**: Automatically includes `Imports System` and any required namespaces for event parameter types
+- **Synchronous Methods**: Standard `RaiseEvent_*` methods for immediate event raising
+- **Asynchronous Methods**: `RaiseEventAsync_*` methods for async event raising
+- **Scheduled Methods**: `ScheduleEvent_*` methods for deferred event raising (ideal for game frameworks)
+- **Event Scheduler Module**: Dedicated `{ModuleName}EventScheduler` module for managing scheduled events
 - **Well-Formatted Code**: Proper indentation and spacing for readability
+
+### The Event Scheduler
+The generated `{ModuleName}EventScheduler` module provides a thread-safe way to schedule events to be raised later, which is particularly useful in game frameworks like MonoGame and FNA where you want to avoid raising events during the update phase.
+
+#### Key Features
+- **Thread-Safe Operation**: Uses synchronization to ensure thread safety
+- **Event Queuing**: Queues events to be raised later
+- **Batch Processing**: Raises all scheduled events at once
+
+#### Usage Example (Game Framework)
+```vb
+' In your game's Update method
+Private Sub Update(gameTime As GameTime)
+    ' Game logic that determines when to raise events
+    If playerScoreChanged Then
+        ScheduleEvent_ScoreChanged(newScore)
+    End If
+    
+    If enemyCountChanged Then
+        ScheduleEvent_EnemyCountChanged(newEnemyCount)
+    End If
+End Sub
+
+' In your game's Draw method
+Private Sub Draw(gameTime As GameTime)
+    ' Raise all scheduled events before rendering
+    MyEventsEventScheduler.RaiseScheduledEvents()
+    
+    ' Render game graphics
+    ' ...
+End Sub
+```
 
 ## Benefits
 - **Reduced Boilerplate Code**: No need to manually write event raiser methods
@@ -161,6 +368,10 @@ The generator supports:
 - **Improved Readability**: Clear, well-documented raise methods
 - **Fewer Errors**: Eliminates typos and parameter mismatches
 - **Maintenance Friendly**: Automatically updates when events change
+- **Automatic Namespace Management**: No need to manually add imports for custom types
+- **Versatile Event Raising**: Choose between synchronous, asynchronous, or scheduled event raising
+- **Game Framework Compatibility**: Scheduled event raising is ideal for game frameworks like MonoGame and FNA
+- **Thread-Safe Operation**: The event scheduler uses synchronization to ensure thread safety
 
 ## License
 This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
