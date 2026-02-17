@@ -3,12 +3,17 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.5`. _Note that version 1.1.3 introduces delegate pattern support for events defined using explicit delegate types, version 1.1.4 is focused on documentation improvements, and version 1.1.5 refines the implementation by focusing on core functionality for delegate patterns._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.5`. Having undergone frequent version updates recently, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
+- Critical bug fixes
+- Compatibility with new .NET versions
+- Truly compelling feature requests
+
+Otherwise, version 1.1.5 is here to stay, working quietly in the background, with delegate pattern support for event declarations in VB.NET module as the current latest feature.
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
 - The generator includes `Imports System` by default in generated files.
-- Additional imports for custom types any now properly recognized - no other settings required.
+- Additional imports for custom types are now properly recognized - no other settings required.
   - e.g. `Public Event CollidePoint(rect As RectangleF, point As Vector2)` (in VB.NET MonoGame projects)
   - This will include `Imports Microsoft.Xna.Framework` in the generated source file.
 - **For version 1.1.5**: It is recommended to use parameterized events (e.g., `Public Event MyEvent(sender As Object, e As EventArgs)`) for better clarity, though delegate pattern events (e.g., `Public Event MyEvent As EventHandler`) are still fully supported and useful, especially since `EventHandler` itself provides descriptive parameter naming.
@@ -23,7 +28,7 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 - **Async Raiser Support**: Generates asynchronous `RaiseEventAsync_*` methods for all events
 - **Event Scheduler**: Generates a dedicated `{ModuleName}EventScheduler` module for each event module, allowing events to be scheduled and raised later - ideal for game frameworks like MonoGame and FNA
 - **Automatic Namespace Detection**: Automatically detects and includes required namespaces for event parameter types
-- **Delegate Pattern Support (Version 1.1.3)**: Generates event raiser methods for events defined using delegate pattern (e.g. `Public Event MyEvent As EventHandler`)
+- **Delegate Pattern Support (Version 1.1.3+)**: Generates event raiser methods for events defined using delegate pattern (e.g. `Public Event MyEvent As EventHandler`)
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -63,8 +68,8 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 ```vb
 Partial Public Module MyEvents
     ' Standard event pattern (parameterized)
-    Public Event TemperatureChanged(temperature As Integer)
-    Public Event HumidityChanged(humidity As Integer)
+    Public Event TemperatureChanged(temperature As Double)
+    Public Event HumidityChanged(humidity As Double)
     Public Event LightLevelChanged(lightLevel As Integer)
     
     ' Delegate pattern (using explicit delegate types)
@@ -94,7 +99,7 @@ Partial Public Module MyEvents
     ''' Raises the TemperatureChanged event.
     ''' </summary>
     ''' <param name="temperature">The temperature parameter to raise the event with.</param>
-    Public Sub RaiseEvent_TemperatureChanged(temperature As Integer)
+    Public Sub RaiseEvent_TemperatureChanged(temperature As Double)
         RaiseEvent TemperatureChanged(temperature)
     End Sub
 
@@ -106,7 +111,7 @@ Partial Public Module MyEvents
     ''' <remarks>
     ''' For game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_TemperatureChanged' method instead.
     ''' </remarks>
-    Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Integer) As Task
+    Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Double) As Task
         Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
     End Function
 
@@ -114,7 +119,7 @@ Partial Public Module MyEvents
     ''' Schedules the TemperatureChanged event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).
     ''' </summary>
     ''' <param name="temperature">The temperature parameter to raise the event with.</param>
-    Public Sub ScheduleEvent_TemperatureChanged(temperature As Integer)
+    Public Sub ScheduleEvent_TemperatureChanged(temperature As Double)
         ScheduleEventAction(Sub() RaiseEvent TemperatureChanged(temperature))
     End Sub
 
@@ -122,7 +127,7 @@ Partial Public Module MyEvents
     ''' Raises the HumidityChanged event.
     ''' </summary>
     ''' <param name="humidity">The humidity parameter to raise the event with.</param>
-    Public Sub RaiseEvent_HumidityChanged(humidity As Integer)
+    Public Sub RaiseEvent_HumidityChanged(humidity As Double)
         RaiseEvent HumidityChanged(humidity)
     End Sub
 
@@ -134,7 +139,7 @@ Partial Public Module MyEvents
     ''' <remarks>
     ''' For game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_HumidityChanged' method instead.
     ''' </remarks>
-    Public Async Function RaiseEventAsync_HumidityChanged(humidity As Integer) As Task
+    Public Async Function RaiseEventAsync_HumidityChanged(humidity As Double) As Task
         Await Task.Run(Sub() RaiseEvent HumidityChanged(humidity))
     End Function
 
@@ -142,7 +147,7 @@ Partial Public Module MyEvents
     ''' Schedules the HumidityChanged event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).
     ''' </summary>
     ''' <param name="humidity">The humidity parameter to raise the event with.</param>
-    Public Sub ScheduleEvent_HumidityChanged(humidity As Integer)
+    Public Sub ScheduleEvent_HumidityChanged(humidity As Double)
         ScheduleEventAction(Sub() RaiseEvent HumidityChanged(humidity))
     End Sub
 
@@ -271,8 +276,8 @@ End Module
 ```vb
 ' In another part of your code (e.g. a class that needs to raise events)
 Private Sub UpdateEnvironmentalData()
-    Dim newTemp As Integer = 25
-    Dim newHumidity As Integer = 60
+    Dim newTemp As Double = 25.5
+    Dim newHumidity As Double = 75.3
     Dim newLightLevel As Integer = 80
     
     ' Use the generated methods to raise events
@@ -287,8 +292,8 @@ End Sub
 ```vb
 ' Using async/await pattern
 Private Async Function UpdateEnvironmentalDataAsync() As Task
-    Dim newTemp As Integer = 25
-    Dim newHumidity As Integer = 60
+    Dim newTemp As Double = 25.5
+    Dim newHumidity As Double = 75.3
     Dim newLightLevel As Integer = 80
     
     ' Use the generated async methods
