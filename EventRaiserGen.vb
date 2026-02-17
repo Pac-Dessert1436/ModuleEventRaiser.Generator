@@ -1,3 +1,4 @@
+Imports System.Security.Cryptography
 Imports Microsoft.CodeAnalysis
 Imports Microsoft.CodeAnalysis.Text
 Imports Microsoft.CodeAnalysis.VisualBasic
@@ -158,8 +159,7 @@ Public NotInheritable Class EventRaiserGen
     End Sub
 
     Private Function GetParametersFromDelegate(
-    delegateTypeSyntax As TypeSyntax,
-    semanticModel As SemanticModel) As List(Of ParameterInfo)
+        delegateTypeSyntax As TypeSyntax, semanticModel As SemanticModel) As List(Of ParameterInfo)
 
         Dim parameters As New List(Of ParameterInfo)
         Dim typeInfo = semanticModel.GetTypeInfo(delegateTypeSyntax)
@@ -176,38 +176,20 @@ Public NotInheritable Class EventRaiserGen
                     ' Generate a meaningful parameter name
                     Dim paramName = param.Name
                     If String.IsNullOrEmpty(paramName) Then
-                        ' Use common naming conventions based on type
-                        paramName = GetDefaultParameterName(param.Type, parameters.Count + 1)
+                        ' Descriptive naming doesn't work at all - fall back to "arg*" naming
+                        paramName = String.Format("arg{0}", parameters.Count)
                     End If
 
                     parameters.Add(New ParameterInfo With {
-                    .ParamName = paramName,
-                    .ParamType = paramType,
-                    .ContainingNamespace = containingNamespace
-                })
+                        .ParamName = paramName,
+                        .ParamType = paramType,
+                        .ContainingNamespace = containingNamespace
+                    })
                 Next
             End If
         End If
 
         Return parameters
-    End Function
-
-    Private Function GetDefaultParameterName(typeSymbol As ITypeSymbol, index As Integer) As String
-        ' Common naming conventions
-        Select Case typeSymbol.Name
-            Case "Object", "Object?" : Return "sender"
-            Case "EventArgs", "EventArgs?" : Return "e"
-            Case "String", "String?" : Return "value"
-            Case "Integer", "Integer?" : Return "count"
-            Case "Boolean", "Boolean?" : Return "flag"
-            Case Else
-                ' Use type name with first letter lowercase
-                Dim typeName = typeSymbol.Name
-                If typeName.Length > 0 Then
-                    Return Char.ToLowerInvariant(typeName(0)) & typeName.Substring(1)
-                End If
-                Return $"arg{index}"
-        End Select
     End Function
 
     Private Shared Function GetEventParameters _
@@ -263,9 +245,14 @@ Public NotInheritable Class EventRaiserGen
                         Return "The source of the event."
                     Case pInfo.ParamName = "e" AndAlso pInfo.ParamType = "System.EventArgs"
                         Return "An object that contains the event data."
+                    Case pInfo.ParamName.StartsWith("arg")
+                        ' Extract number from ParamName of the parameter info
+                        Dim substr = pInfo.ParamName.Substring(3), id = 0
+                        If Not Integer.TryParse(substr, id) Then GoTo DefaultCase
+                        Return $"The number {id} argument to raise the event with."
                     Case Else
-                        Dim desc As String = pInfo.ParamName
-                        ' Add spaces between camelCase words
+DefaultCase:            Dim desc As String = pInfo.ParamName
+                        ' Add spaces between camelCase or PascalCase words
                         For i As Integer = 1 To desc.Length - 1
                             If Char.IsUpper(desc(i)) Then
                                 desc = desc.Insert(i, " ")

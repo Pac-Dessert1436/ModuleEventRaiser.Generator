@@ -3,7 +3,7 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.3`. _Note that version 1.1.3 introduces delegate pattern support for events defined using explicit delegate types, and version 1.1.4 is identical to 1.1.3 in functionality except for documentation adjustments._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.5`. _Note that version 1.1.3 introduces delegate pattern support for events defined using explicit delegate types, version 1.1.4 is focused on documentation improvements, and version 1.1.5 refines the implementation by focusing on core functionality for delegate patterns._
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -11,6 +11,7 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 - Additional imports for custom types any now properly recognized - no other settings required.
   - e.g. `Public Event CollidePoint(rect As RectangleF, point As Vector2)` (in VB.NET MonoGame projects)
   - This will include `Imports Microsoft.Xna.Framework` in the generated source file.
+- **For version 1.1.5**: It is recommended to use parameterized events (e.g., `Public Event MyEvent(sender As Object, e As EventArgs)`) for better clarity, though delegate pattern events (e.g., `Public Event MyEvent As EventHandler`) are still fully supported and useful, especially since `EventHandler` itself provides descriptive parameter naming.
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
@@ -50,10 +51,11 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.3
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.5
    ```
    - Version 1.1.3 introduces delegate pattern support, making it compatible with events defined using explicit delegate types.
-   - Version 1.1.4 is identical to 1.1.3 in functionality except for documentation changes.
+   - Version 1.1.4 is focused on documentation improvements and bug fixes.
+   - Version 1.1.5 refines the implementation by focusing on core functionality for delegate patterns and recommends using parameterized events for better clarity.
 
 ## Example Usage
 
