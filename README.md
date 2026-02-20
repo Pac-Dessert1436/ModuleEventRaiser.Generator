@@ -3,12 +3,12 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.5`. Having undergone frequent version updates recently, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.6`. Having undergone frequent version updates recently, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
 - Critical bug fixes
 - Compatibility with new .NET versions
 - Truly compelling feature requests
 
-Otherwise, version 1.1.5 is here to stay, working quietly in the background, with delegate pattern support for event declarations in VB.NET module as the current latest feature.
+Version 1.1.6 fixes a minor issue of module method conflict, and now it is here to stay, working quietly in the background, with queue-based event scheduling and delegate pattern support in VB.NET modules as the current latest feature.
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -56,11 +56,11 @@ Otherwise, version 1.1.5 is here to stay, working quietly in the background, wit
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.5
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.6
    ```
-   - Version 1.1.3 introduces delegate pattern support, making it compatible with events defined using explicit delegate types.
-   - Version 1.1.4 is focused on documentation improvements and bug fixes.
+   - Versions 1.1.3-1.1.4 introduce delegate pattern support, making the source generator compatible with events defined using explicit delegate types.
    - Version 1.1.5 refines the implementation by focusing on core functionality for delegate patterns and recommends using parameterized events for better clarity.
+   - Version 1.1.6 resolves a minor issue of module method conflict.
 
 ## Example Usage
 
@@ -120,7 +120,7 @@ Partial Public Module MyEvents
     ''' </summary>
     ''' <param name="temperature">The temperature parameter to raise the event with.</param>
     Public Sub ScheduleEvent_TemperatureChanged(temperature As Double)
-        ScheduleEventAction(Sub() RaiseEvent TemperatureChanged(temperature))
+        MyEventsEventScheduler.ScheduleEventAction(Sub() RaiseEvent TemperatureChanged(temperature))
     End Sub
 
     ''' <summary>
@@ -148,7 +148,7 @@ Partial Public Module MyEvents
     ''' </summary>
     ''' <param name="humidity">The humidity parameter to raise the event with.</param>
     Public Sub ScheduleEvent_HumidityChanged(humidity As Double)
-        ScheduleEventAction(Sub() RaiseEvent HumidityChanged(humidity))
+        MyEventsEventScheduler.ScheduleEventAction(Sub() RaiseEvent HumidityChanged(humidity))
     End Sub
 
     ''' <summary>
@@ -176,7 +176,7 @@ Partial Public Module MyEvents
     ''' </summary>
     ''' <param name="lightLevel">The light level parameter to raise the event with.</param>
     Public Sub ScheduleEvent_LightLevelChanged(lightLevel As Integer)
-        ScheduleEventAction(Sub() RaiseEvent LightLevelChanged(lightLevel))
+        MyEventsEventScheduler.ScheduleEventAction(Sub() RaiseEvent LightLevelChanged(lightLevel))
     End Sub
 
     ' NEW in 1.1.3: Delegate pattern event raising methods (documentation follows the same pattern)
@@ -189,7 +189,7 @@ Partial Public Module MyEvents
     End Sub
 
     Public Sub ScheduleEvent_MyEvent(sender As Object, e As EventArgs)
-        ScheduleEventAction(Sub() RaiseEvent MyEvent(sender, e))
+        MyEventsEventScheduler.ScheduleEventAction(Sub() RaiseEvent MyEvent(sender, e))
     End Sub
 
     ' ... More delegate pattern event raising methods ...
@@ -204,7 +204,7 @@ End Module
 ''' particularly important in game development to maintain consistent frame rates and avoid
 ''' race conditions.
 ''' </remarks>
-Public Module {moduleInfo.ModuleName}EventScheduler
+Public Module MyEventsEventScheduler
     Private ReadOnly _pendingEvents As New List(Of Action)
     Private ReadOnly _lock As New Object()
 
@@ -232,7 +232,7 @@ Public Module {moduleInfo.ModuleName}EventScheduler
     Public Sub RaiseScheduledEvents()
         Dim actionsToRaise = Array.Empty(Of Action)()
         SyncLock _lock
-            If _pendingEvents.Count = 0 Then Return
+            If _pendingEvents.Count = 0 Then Exit Sub
             actionsToRaise = _pendingEvents.ToArray()
             _pendingEvents.Clear()
         End SyncLock

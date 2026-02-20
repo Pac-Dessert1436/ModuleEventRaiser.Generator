@@ -84,7 +84,7 @@ Public NotInheritable Class EventRaiserGen
                     If typeInfo.Type IsNot Nothing Then
                         Dim delegateNamespace = typeInfo.Type.ContainingNamespace.ToDisplayString()
                         If Not String.IsNullOrEmpty(delegateNamespace) AndAlso
-               Not delegateNamespace = "System" Then
+                           Not delegateNamespace = "System" Then
                             requiredNamespaces.Add(delegateNamespace)
                         End If
                     End If
@@ -234,7 +234,7 @@ Public NotInheritable Class EventRaiserGen
         Return parameters
     End Function
 
-    Private Shared Function GenerateModuleRaiseMethods(moduleInfo As ModuleInfo) As String
+    Private Shared Function GenerateModuleRaiseMethods(modInfo As ModuleInfo) As String
         Dim code As New System.Text.StringBuilder
 
         ' Prepare the parameter description function
@@ -249,7 +249,22 @@ Public NotInheritable Class EventRaiserGen
                         ' Extract number from ParamName of the parameter info
                         Dim substr = pInfo.ParamName.Substring(3), id = 0
                         If Not Integer.TryParse(substr, id) Then GoTo DefaultCase
-                        Return $"The number {id} argument to raise the event with."
+                        Dim suffix As String
+                        If Math.Abs(id) Mod 100 >= 10 AndAlso Math.Abs(id) Mod 100 <= 20 Then
+                            suffix = "th"
+                        Else
+                            Select Case Math.Abs(id) Mod 10
+                                Case 1
+                                    suffix = "st"
+                                Case 2
+                                    suffix = "nd"
+                                Case 3
+                                    suffix = "rd"
+                                Case Else
+                                    suffix = "th"
+                            End Select
+                        End If
+                        Return $"The {id}{suffix} argument to raise the event with."
                     Case Else
 DefaultCase:            Dim desc As String = pInfo.ParamName
                         ' Add spaces between camelCase or PascalCase words
@@ -274,7 +289,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         code.AppendLine("Option Strict On")
         code.AppendLine()
 
-        Dim namespaces = moduleInfo.RequiredNamespaces
+        Dim namespaces = modInfo.RequiredNamespaces
         ' Add collected namespaces (sorted for consistency)
         If namespaces IsNot Nothing AndAlso namespaces.Count > 0 Then
             For Each ns As String In namespaces.OrderBy(Function(x) x)
@@ -284,11 +299,11 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         code.AppendLine()
 
         ' Begin module
-        code.AppendLine($"Partial Public Module {moduleInfo.ModuleName}")
+        code.AppendLine($"Partial Public Module {modInfo.ModuleName}")
         code.AppendLine()
 
         ' Generate raise methods for each event in this module
-        For Each evtInfo As EventInfo In moduleInfo.Events
+        For Each evtInfo As EventInfo In modInfo.Events
             ' Skip if event name is empty
             If String.IsNullOrWhiteSpace(evtInfo.EventName) Then Continue For
 
@@ -352,7 +367,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
             Next pInfo
             code.AppendLine($"    Public Sub ScheduleEvent_{evtInfo.EventName}({params})")
-            code.AppendLine($"        ScheduleEventAction(Sub() RaiseEvent {evtInfo.EventName}({args}))")
+            code.AppendLine($"        {modInfo.ModuleName}EventScheduler.ScheduleEventAction(Sub() RaiseEvent {evtInfo.EventName}({args}))")
             code.AppendLine($"    End Sub")
             code.AppendLine()
         Next evtInfo
@@ -363,7 +378,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         ' New in version 1.1.0+: Event scheduler module with comprehensive documentation
         code.AppendLine($"
 ''' <summary>
-''' Schedules event actions from the {moduleInfo.ModuleName} module to be raised later. 
+''' Schedules event actions from the {modInfo.ModuleName} module to be raised later. 
 ''' Useful for game frameworks (MonoGame, FNA, etc.) where you want to avoid raising events 
 ''' during the update phase.
 ''' </summary>
@@ -372,7 +387,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 ''' particularly important in game development to maintain consistent frame rates and avoid
 ''' race conditions.
 ''' </remarks>
-Public Module {moduleInfo.ModuleName}EventScheduler
+Public Module {modInfo.ModuleName}EventScheduler
     Private ReadOnly _pendingEvents As New List(Of Action)
     Private ReadOnly _lock As New Object()
 
