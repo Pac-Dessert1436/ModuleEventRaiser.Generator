@@ -301,7 +301,6 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         ' Begin module
         code.AppendLine($"Partial Public Module {modInfo.ModuleName}")
         code.AppendLine()
-
         ' Generate raise methods for each event in this module
         For Each evtInfo As EventInfo In modInfo.Events
             ' Skip if event name is empty
@@ -330,14 +329,12 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 
             ' Generate the raise method
             code.AppendLine($"    ''' <summary>")
-            code.AppendLine($"    ''' Raises the {evtInfo.EventName} event.")
+            code.AppendLine($"    ''' Raises the {evtInfo.EventName} event (direct invocation).")
             code.AppendLine($"    ''' </summary>")
-
             ' Add parameter documentation
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
             Next pInfo
-
             code.AppendLine($"    Public Sub RaiseEvent_{evtInfo.EventName}({params})")
             code.AppendLine($"        RaiseEvent {evtInfo.EventName}({args})")
             code.AppendLine($"    End Sub")
@@ -345,16 +342,20 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 
             ' Generate async raise method (same as sync raise method)
             code.AppendLine($"    ''' <summary>")
-            code.AppendLine($"    ''' Asynchronously raises the {evtInfo.EventName} event. DO NOT USE THIS METHOD IN GAME FRAMEWORKS (MonoGame, FNA, etc.)")
+            code.AppendLine($"    ''' Asynchronously raises the {evtInfo.EventName} event. Use this method only in desktop apps, networking, etc.")
+            code.AppendLine($"    ''' DO NOT USE THIS METHOD WHEN WRITING GAME LOGIC IN GAME FRAMEWORKS (MonoGame, FNA, etc.).")
             code.AppendLine($"    ''' </summary>")
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
             Next pInfo
+            code.AppendLine($"    ''' <param name=""withDelaySec"">The delay in seconds before raising the event. Default is 0.</param>")
             code.AppendLine($"    ''' <returns>A task representing the asynchronous operation.</returns>")
             code.AppendLine($"    ''' <remarks>")
-            code.AppendLine($"    ''' For game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_{evtInfo.EventName}' method instead.")
+            code.AppendLine($"    ''' For game logic execution in game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_{evtInfo.EventName}' method instead.")
             code.AppendLine($"    ''' </remarks>")
-            code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}) As Task")
+            code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}, Optional withDelaySec As Double = 0) As Task")
+            code.AppendLine($"        ArgumentOutOfRangeException.ThrowIfNegative(withDelaySec)")
+            code.AppendLine($"        If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))")
             code.AppendLine($"        Await Task.Run(Sub() RaiseEvent {evtInfo.EventName}({args}))")
             code.AppendLine($"    End Function")
             code.AppendLine()
@@ -366,12 +367,13 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
             Next pInfo
-            code.AppendLine($"    Public Sub ScheduleEvent_{evtInfo.EventName}({params})")
-            code.AppendLine($"        {modInfo.ModuleName}EventScheduler.ScheduleEventAction(Sub() RaiseEvent {evtInfo.EventName}({args}))")
+            code.AppendLine($"    ''' <param name=""withPriority"">The priority value to raise the event with (default is 0).")
+            code.AppendLine($"    ''' Events with higher priority values are raised first.</param>")
+            code.AppendLine($"    Public Sub ScheduleEvent_{evtInfo.EventName}({params}, Optional withPriority As Integer = 0)")
+            code.AppendLine($"        {modInfo.ModuleName}EventScheduler.ScheduleEventAction(Sub() RaiseEvent {evtInfo.EventName}({args}), withPriority)")
             code.AppendLine($"    End Sub")
             code.AppendLine()
         Next evtInfo
-
         ' End module with proper newline (POSIX standard)
         code.AppendLine("End Module")
 
@@ -388,35 +390,39 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 ''' race conditions.
 ''' </remarks>
 Public Module {modInfo.ModuleName}EventScheduler
-    Private ReadOnly _pendingEvents As New List(Of Action)
-    Private ReadOnly _lock As New Object()
+    Private ReadOnly _pendingEvents As New Queue(Of ([event] As Action, priority As Integer))
+    Private ReadOnly _lock As New Object
 
     ''' <summary>
     ''' Schedules an event action to be raised later.
     ''' </summary>
     ''' <param name=""eventAction"">The event action to schedule.</param>
+    ''' <param name=""priorityValue"">The priority value of the event (default is 0).
+    ''' Events with higher priority values are raised first.</param>
     ''' <remarks>
     ''' This method is thread-safe and can be called from any thread.
     ''' </remarks>
-    Public Sub ScheduleEventAction(eventAction As Action)
+    Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
         SyncLock _lock
-            _pendingEvents.Add(eventAction)
+            _pendingEvents.Enqueue((eventAction, priorityValue))
         End SyncLock
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions defined in this module.
+    ''' Raises all scheduled event actions defined in this module. Events within the same
+    ''' priority level are raised in first-in-first-out (FIFO) order.
     ''' </summary>
     ''' <remarks>
-    ''' This method is thread-safe and should be called during a phase where
-    ''' event handling is safe (e.g., during the 'Draw' phase in game frameworks).
-    ''' All scheduled events are raised in the order they were scheduled.
+    ''' This method is thread-safe and should be called during a phase where event handling 
+    ''' is safe (e.g., during the 'Draw' phase in game frameworks). All scheduled events are 
+    ''' raised in the order they were scheduled, with HIGHER PRIORITY events raised FIRST.
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
         Dim actionsToRaise = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
-            actionsToRaise = _pendingEvents.ToArray()
+            actionsToRaise = Aggregate e In _pendingEvents Order By e.priority Descending
+                                 Select e.event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
 
