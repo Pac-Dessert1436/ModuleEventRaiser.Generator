@@ -1,7 +1,7 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules, stable and feature-complete for its intended use case.
 
-**New in version 1.1.7**: 
+**New in version 1.1.7(.2)**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
 - **Enhanced asynchronous methods** - add optional delays to async event raising
 - **Improved parameter documentation** - better XML documentation for generated methods
@@ -9,23 +9,23 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
 
-## 📦 Version Notes: 1.1.6 → 1.1.7
+## 📦 Version Notes: 1.1.6 → 1.1.7(.2)
 
-### What's New in 1.1.7?
+### What's New in 1.1.7(.2)?
 
-Version 1.1.7 includes significant enhancements to both the event scheduling system and asynchronous event handling, making it more powerful and flexible than ever.
+Version 1.1.7(.2) includes significant enhancements to both the event scheduling system and asynchronous event handling, making it more powerful and flexible than ever.
 
 ### 🔥 Key New Features
 
 #### 1. Priority-Based Event Scheduling
 - **Control event order**: Assign priority values to scheduled events
 - **Higher priority first**: Events with larger priority values are raised before lower ones
-- **Flexible syntax**: `ScheduleEvent_xxx(parameters, Optional withPriority As Integer = 0)`
+- **Flexible syntax**: `ScheduleEvent_xxx(...parameters, Optional withPriority As Integer = 0)`
 
 #### 2. Enhanced Asynchronous Methods
 - **Optional delay support**: Add `withDelaySec` parameter to async methods
 - **Validation**: Automatic validation to ensure non-negative delay values
-- **Improved syntax**: `RaiseEventAsync_xxx(parameters, Optional withDelaySec As Double = 0)`
+- **Improved syntax**: `RaiseEventAsync_xxx(...parameters, Optional withDelaySec As Double = 0)`
 
 #### 3. Improved Documentation
 - **Better XML docs**: Enhanced parameter descriptions and method documentation
@@ -34,10 +34,10 @@ Version 1.1.7 includes significant enhancements to both the event scheduling sys
 
 ### 🛠️ Technical Changes
 
-| Feature | Version 1.1.6 | Version 1.1.7 |
+| Feature | Version 1.1.6 | Version 1.1.7(.2) |
 |---------|---------------|---------------|
-| ScheduleEvent signature | `ScheduleEvent_xxx(params)` | `ScheduleEvent_xxx(params, Optional withPriority As Integer = 0)` |
-| RaiseEventAsync signature | `RaiseEventAsync_xxx(params)` | `RaiseEventAsync_xxx(params, Optional withDelaySec As Double = 0)` |
+| ScheduleEvent signature | `ScheduleEvent_xxx(...params)` | `ScheduleEvent_xxx(...params, Optional withPriority As Integer = 0)` |
+| RaiseEventAsync signature | `RaiseEventAsync_xxx(...params)` | `RaiseEventAsync_xxx(...params, Optional withDelaySec As Double = 0)` |
 | Event scheduling order | FIFO queue | Priority-based (FIFO within same priority) |
 | Async delay support | ❌ No | ✅ Yes |
 
@@ -53,7 +53,7 @@ Version 1.1.7 includes significant enhancements to both the event scheduling sys
 |---------|---------------------|--------------|----------------------|---------------|
 | 1.1.5 | ❌ No | ❌ No | ⚠️ Limited | Good |
 | 1.1.6 | ❌ No | ❌ No | ✅ Full | Good |
-| 1.1.7 | ✅ Yes | ✅ Yes | ✅ Full | Excellent |
+| 1.1.7(.2) | ✅ Yes | ✅ Yes | ✅ Full | Excellent |
 
 ---
 
@@ -86,7 +86,7 @@ Both versions are valid. Choose what feels right for your project.
 
 ---
 
-> 💡 **Tip**: If you're unsure, 1.1.7 is always a safe upgrade - it's backward-compatible with all previous versions and adds powerful new features.
+> 💡 **Tip**: If you're unsure, version 1.1.7(.2) is always a safe upgrade - it's backward-compatible with all previous versions and adds powerful new features.
 
 ## Features
 - Automatically generate `RaiseEvent_xxx` methods for Module events
@@ -102,7 +102,7 @@ Both versions are valid. Choose what feels right for your project.
 - **New in 1.1.6**: **Multiple event module support** - fully qualified method calls for no ambiguity
 - **New in 1.1.7**: **Priority-based event scheduling** - control event order with priority values
 - **New in 1.1.7**: **Enhanced asynchronous methods** - optional delay support with validation
-- **New in 1.1.7**: **Improved parameter documentation** - better XML docs and IntelliSense
+- **New in 1.1.7.2**: Improved documentation for event scheduling methods, and better XML docs and IntelliSense for generated methods
 
 ## Usage Example
 Define your events in a partial module (like `MyEvents.vb`):
@@ -314,4 +314,4 @@ dotnet add package ModuleEventRaiser.Generator
 ```
 
 ## License
-BSD 3-Clause License
+[BSD 3-Clause License](LICENSE)

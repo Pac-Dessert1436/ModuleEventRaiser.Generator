@@ -301,7 +301,6 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         ' Begin module
         code.AppendLine($"Partial Public Module {modInfo.ModuleName}")
         code.AppendLine()
-
         ' Generate raise methods for each event in this module
         For Each evtInfo As EventInfo In modInfo.Events
             ' Skip if event name is empty
@@ -330,14 +329,12 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 
             ' Generate the raise method
             code.AppendLine($"    ''' <summary>")
-            code.AppendLine($"    ''' Raises the {evtInfo.EventName} event.")
+            code.AppendLine($"    ''' Raises the {evtInfo.EventName} event (direct invocation).")
             code.AppendLine($"    ''' </summary>")
-
             ' Add parameter documentation
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
             Next pInfo
-
             code.AppendLine($"    Public Sub RaiseEvent_{evtInfo.EventName}({params})")
             code.AppendLine($"        RaiseEvent {evtInfo.EventName}({args})")
             code.AppendLine($"    End Sub")
@@ -377,7 +374,6 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    End Sub")
             code.AppendLine()
         Next evtInfo
-
         ' End module with proper newline (POSIX standard)
         code.AppendLine("End Module")
 
@@ -386,7 +382,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 ''' <summary>
 ''' Schedules event actions from the {modInfo.ModuleName} module to be raised later. 
 ''' Useful for game frameworks (MonoGame, FNA, etc.) where you want to avoid raising events 
-''' directly during the update phase.
+''' during the update phase.
 ''' </summary>
 ''' <remarks>
 ''' This module provides a thread-safe way to queue events and raise them at a later time,
@@ -413,13 +409,13 @@ Public Module {modInfo.ModuleName}EventScheduler
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions defined in this module.
+    ''' Raises all scheduled event actions defined in this module. Events within the same
+    ''' priority level are raised in first-in-first-out (FIFO) order.
     ''' </summary>
     ''' <remarks>
-    ''' This method is thread-safe and should be called during a phase where
-    ''' event handling is safe (e.g., during the 'Draw' phase in game frameworks).
-    ''' All scheduled events are raised in the order they were scheduled,
-    ''' with higher priority events raised first.
+    ''' This method is thread-safe and should be called during a phase where event handling 
+    ''' is safe (e.g., during the 'Draw' phase in game frameworks). All scheduled events are 
+    ''' raised in the order they were scheduled, with HIGHER PRIORITY events raised FIRST.
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
         Dim actionsToRaise = Array.Empty(Of Action)()
