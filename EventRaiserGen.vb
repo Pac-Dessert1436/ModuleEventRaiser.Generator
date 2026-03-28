@@ -1,4 +1,3 @@
-Imports System.Security.Cryptography
 Imports Microsoft.CodeAnalysis
 Imports Microsoft.CodeAnalysis.Text
 Imports Microsoft.CodeAnalysis.VisualBasic
@@ -319,6 +318,8 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
                 paramList.Add($"{pInfo.ParamName} As {pTypeName}")
             Next pInfo
             Dim params = String.Join(", ", paramList)
+            ' Fixed: Add comma only if `params` is not empty
+            Dim comma = If(String.IsNullOrWhiteSpace(params), "", ", ")
 
             ' Build argument list for RaiseEvent
             Dim argList As New List(Of String)
@@ -353,14 +354,14 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    ''' <remarks>")
             code.AppendLine($"    ''' For game logic execution in game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_{evtInfo.EventName}' method instead.")
             code.AppendLine($"    ''' </remarks>")
-            code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}, Optional withDelaySec As Double = 0) As Task")
+            code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}{comma}Optional withDelaySec As Double = 0) As Task")
             code.AppendLine($"        ArgumentOutOfRangeException.ThrowIfNegative(withDelaySec)")
             code.AppendLine($"        If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))")
             code.AppendLine($"        Await Task.Run(Sub() RaiseEvent {evtInfo.EventName}({args}))")
             code.AppendLine($"    End Function")
             code.AppendLine()
 
-            ' New in version 1.1.0: Add "ScheduleEvent_xxx" methods for each event
+            ' New in version 1.1.0+: Add "ScheduleEvent_xxx" methods for each event
             code.AppendLine($"    ''' <summary>")
             code.AppendLine($"    ''' Schedules the {evtInfo.EventName} event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).")
             code.AppendLine($"    ''' </summary>")
@@ -369,7 +370,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             Next pInfo
             code.AppendLine($"    ''' <param name=""withPriority"">The priority value to raise the event with (default is 0).")
             code.AppendLine($"    ''' Events with higher priority values are raised first.</param>")
-            code.AppendLine($"    Public Sub ScheduleEvent_{evtInfo.EventName}({params}, Optional withPriority As Integer = 0)")
+            code.AppendLine($"    Public Sub ScheduleEvent_{evtInfo.EventName}({params}{comma}Optional withPriority As Integer = 0)")
             code.AppendLine($"        {modInfo.ModuleName}EventScheduler.ScheduleEventAction(Sub() RaiseEvent {evtInfo.EventName}({args}), withPriority)")
             code.AppendLine($"    End Sub")
             code.AppendLine()

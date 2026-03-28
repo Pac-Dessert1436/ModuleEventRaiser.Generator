@@ -3,14 +3,14 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.2`. Having undergone frequent version updates recently, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.3`. Having undergone frequent version updates recently, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
 - Critical bug fixes
 - Compatibility with new .NET versions
 - Truly compelling feature requests
 
-Version 1.1.7 introduces optional delay in seconds for async event raising, together with priority-based event scheduling. It also adds reserved parameter names for these new features, and now it is here to stay, working quietly in the background.
+Version 1.1.7+ introduces optional delay in seconds for async event raising, together with priority-based event scheduling. It also adds reserved parameter names for these new features, and now it is here to stay, working quietly in the background.
 
-> NOTE: Version 1.1.7.2 works exactly the same as 1.1.7 except for XML documentation adjustments.
+> NOTE: Version 1.1.7.3 has fixed invalid leading comma generation in method signatures when event parameter list is empty (which caused compilation error).
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -63,9 +63,10 @@ Version 1.1.7 introduces optional delay in seconds for async event raising, toge
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.2
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.3
    ```
-   - Versions 1.1.7 introduces optional delay in seconds for async event raising, together with priority-based event scheduling, and version 1.1.7.2 tweaks the XML documentation for the generated methods.
+   - Version 1.1.7 introduces optional delay in seconds for async event raising, together with priority-based event scheduling.
+   - Version 1.1.7.3 has fixed invalid leading comma generation in method signatures when event parameter list is empty.
 
 ## Example Usage
 
