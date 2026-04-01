@@ -1,8 +1,8 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules, stable and feature-complete for its intended use case.
 
-> **v1.1.7.3 Bug Fix**: Fixed invalid leading comma generation in method signatures when event parameter list is empty (caused compilation error).
-> **v1.1.7.4 Bug Fix**: Prevented null event actions from being scheduled into the event queue.
+> - **v1.1.7.3 Bug Fix**: Fixed invalid leading comma generation in method signatures when event parameter list is empty (caused compilation error).
+> - **v1.1.7.4 Bug Fix**: Prevented null event actions from being scheduled into the event queue.
 
 **New in version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
