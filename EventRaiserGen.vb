@@ -404,6 +404,7 @@ Public Module {modInfo.ModuleName}EventScheduler
     ''' This method is thread-safe and can be called from any thread.
     ''' </remarks>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
+        ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
             _pendingEvents.Enqueue((eventAction, priorityValue))
         End SyncLock

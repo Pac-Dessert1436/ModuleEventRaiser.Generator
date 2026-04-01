@@ -3,14 +3,16 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.3`. Having undergone frequent version updates recently, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.4`. Having undergone frequent version updates for a period of time, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
 - Critical bug fixes
 - Compatibility with new .NET versions
 - Truly compelling feature requests
 
 Version 1.1.7+ introduces optional delay in seconds for async event raising, together with priority-based event scheduling. It also adds reserved parameter names for these new features, and now it is here to stay, working quietly in the background.
 
-> NOTE: Version 1.1.7.3 has fixed invalid leading comma generation in method signatures when event parameter list is empty (which caused compilation error).
+> NOTE: Versions 1.1.7.3 through 1.1.7.4 have fixed two bugs respectively:
+> - Invalid leading comma generation in method signatures when event parameter list is empty (which caused compilation error, fixed on 1.1.7.3).
+> - Null event actions that could be accidentally scheduled into the event queue (now fixed with "`ArgumentNullException.ThrowIfNull(eventAction)`" on 1.1.7.4).
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -63,10 +65,11 @@ Version 1.1.7+ introduces optional delay in seconds for async event raising, tog
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.3
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.4
    ```
    - Version 1.1.7 introduces optional delay in seconds for async event raising, together with priority-based event scheduling.
    - Version 1.1.7.3 has fixed invalid leading comma generation in method signatures when event parameter list is empty.
+   - Version 1.1.7.4 has prevented null event actions from being scheduled into the event queue.
 
 ## Example Usage
 
