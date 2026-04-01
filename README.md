@@ -2,6 +2,7 @@
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules, stable and feature-complete for its intended use case.
 
 > **v1.1.7.3 Bug Fix**: Fixed invalid leading comma generation in method signatures when event parameter list is empty (caused compilation error).
+> **v1.1.7.4 Bug Fix**: Prevented null event actions from being scheduled into the event queue.
 
 **New in version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
@@ -88,7 +89,7 @@ Both versions are valid. Choose what feels right for your project.
 
 ---
 
-> 💡 **Tip**: If you're unsure, version 1.1.7(.2) is always a safe upgrade - it's backward-compatible with all previous versions and adds powerful new features.
+> 💡 **Tip**: If you're unsure, version 1.1.7+ is always a safe upgrade - it's backward-compatible with all previous versions and adds powerful new features.
 
 ## Features
 - Automatically generate `RaiseEvent_xxx` methods for Module events
@@ -104,7 +105,6 @@ Both versions are valid. Choose what feels right for your project.
 - **New in 1.1.6**: **Multiple event module support** - fully qualified method calls for no ambiguity
 - **New in 1.1.7**: **Priority-based event scheduling** - control event order with priority values
 - **New in 1.1.7**: **Enhanced asynchronous methods** - optional delay support with validation
-- **New in 1.1.7.2**: Improved documentation for event scheduling methods, and better XML docs and IntelliSense for generated methods
 
 ## Usage Example
 Define your events in a partial module (like `MyEvents.vb`):

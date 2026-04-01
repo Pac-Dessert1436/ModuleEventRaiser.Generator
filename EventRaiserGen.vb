@@ -361,7 +361,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    End Function")
             code.AppendLine()
 
-            ' New in version 1.1.0+: Add "ScheduleEvent_xxx" methods for each event
+            ' New in version 1.1.0: Add "ScheduleEvent_xxx" methods for each event
             code.AppendLine($"    ''' <summary>")
             code.AppendLine($"    ''' Schedules the {evtInfo.EventName} event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).")
             code.AppendLine($"    ''' </summary>")
@@ -404,6 +404,7 @@ Public Module {modInfo.ModuleName}EventScheduler
     ''' This method is thread-safe and can be called from any thread.
     ''' </remarks>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
+        ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
             _pendingEvents.Enqueue((eventAction, priorityValue))
         End SyncLock
