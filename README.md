@@ -3,16 +3,17 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.4`. Having undergone frequent version updates for a period of time, this source generator is **stable and feature-complete for its intended use case**. Updates in the future will be considered only for:
-- Critical bug fixes
-- Compatibility with new .NET versions
-- Truly compelling feature requests
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.9`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-Version 1.1.7+ introduces optional delay in seconds for async event raising, together with priority-based event scheduling. It also adds reserved parameter names for these new features, and now it is here to stay, working quietly in the background.
+> **v1.1.7.9 Latest Update**: **Enterprise-grade compatibility** with explicit typing for `Option Infer Off` projects, plus comprehensive namespace support - ultimate feature completeness achieved!
 
-> NOTE: Versions 1.1.7.3 through 1.1.7.4 have fixed two bugs respectively:
-> - Invalid leading comma generation in method signatures when event parameter list is empty (which caused compilation error, fixed on 1.1.7.3).
-> - Null event actions that could be accidentally scheduled into the event queue (now fixed with "`ArgumentNullException.ThrowIfNull(eventAction)`" on 1.1.7.4).
+**New in version 1.1.7+**: 
+- **Priority-based event scheduling** - control the order events are raised with priority values
+- **Enhanced asynchronous methods** - add optional delays to async event raising
+- **Improved parameter documentation** - better XML documentation for generated methods
+- Comprehensive **event scheduling system** with thread-safe queue management, perfect for game frameworks (MonoGame, FNA, etc.)
+- **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
+- **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
 
 **Important Notes:**
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -65,15 +66,15 @@ Version 1.1.7+ introduces optional delay in seconds for async event raising, tog
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.4
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.9
    ```
-   - Version 1.1.7 introduces optional delay in seconds for async event raising, together with priority-based event scheduling.
-   - Version 1.1.7.3 has fixed invalid leading comma generation in method signatures when event parameter list is empty.
-   - Version 1.1.7.4 has prevented null event actions from being scheduled into the event queue.
+   - Version 1.1.7.9 delivers **ultimate enterprise-grade compatibility** with explicit typing for `Option Infer Off` projects, plus comprehensive namespace support.
 
 ## Example Usage
 
 ### Input: VB.NET Module with Events
+
+#### Basic Single Namespace Usage
 ```vb
 Partial Public Module MyEvents
     ' Standard event pattern (parameterized)
@@ -88,6 +89,42 @@ Partial Public Module MyEvents
 End Module
 ```
 
+#### Multi-Namespace Support (NEW in 1.1.7.5+)
+Define event modules in different namespaces for better organization:
+
+**GameEvents.vb** (in `MyGame.Events` namespace):
+```vb
+Namespace MyGame.Events
+    Partial Public Module GameEvents
+        Public Event PlayerDied(playerId As Integer)
+        Public Event ScoreUpdated(newScore As Integer)
+        Public Event LevelCompleted(levelId As Integer)
+    End Module
+End Namespace
+```
+
+**UIEvents.vb** (in `MyGame.UI.Events` namespace):
+```vb
+Namespace MyGame.UI.Events
+    Partial Public Module UIEvents
+        Public Event ButtonClicked(buttonName As String)
+        Public Event MenuOpened(menuId As Integer)
+        Public Event DialogClosed(dialogId As Integer)
+    End Module
+End Namespace
+```
+
+**AudioEvents.vb** (in `MyGame.Audio.Events` namespace):
+```vb
+Namespace MyGame.Audio.Events
+    Partial Public Module AudioEvents
+        Public Event SoundPlayed(soundId As Integer)
+        Public Event MusicChanged(trackId As Integer)
+        Public Event VolumeChanged(newVolume As Double)
+    End Module
+End Namespace
+```
+
 ### Output: Generated Event Raiser Methods
 
 **Documentation follows the same pattern**:
@@ -95,6 +132,13 @@ End Module
 > NOTE: The above method is the simplest way to raise events, but synchronous.
 - `RaiseEventAsync_*` methods: Asynchronously raises the * event. Use this method only in desktop apps, networking, etc. DO NOT USE THIS METHOD WHEN WRITING GAME LOGIC IN GAME FRAMEWORKS (MonoGame, FNA, etc.).
 - `ScheduleEvent_*` methods: Schedules the * event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).
+
+**Key Features in Generated Code**:
+- **`Option Infer Off` Compatibility**: All generated code uses explicit type declarations
+- **Multi-Namespace Support**: Automatic namespace handling for organized project structures
+- **Enhanced Parameter Documentation**: Improved XML documentation with descriptive parameter names
+- **Priority-Based Scheduling**: Control event execution order with priority values
+- **Optional Async Delays**: Add delays to async event raising for timing control
 
 ```vb
 ' <auto-generated>
@@ -195,6 +239,7 @@ Public Module MyEventsEventScheduler
     ''' This method is thread-safe and can be called from any thread.
     ''' </remarks>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
+        ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
             _pendingEvents.Enqueue((eventAction, priorityValue))
         End SyncLock
@@ -210,7 +255,8 @@ Public Module MyEventsEventScheduler
     ''' raised in the order they were scheduled, with HIGHER PRIORITY events raised FIRST.
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
-        Dim actionsToRaise = Array.Empty(Of Action)()
+        ' Key fix in 1.1.7.9: Add explicit typing in case of `Option Infer Off`
+        Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
             actionsToRaise = Aggregate e In _pendingEvents Order By e.priority Descending
