@@ -420,7 +420,7 @@ Public Module {modInfo.ModuleName}EventScheduler
     ''' raised in the order they were scheduled, with HIGHER PRIORITY events raised FIRST.
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
-        Dim actionsToRaise = Array.Empty(Of Action)()
+        Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
             actionsToRaise = Aggregate e In _pendingEvents Order By e.priority Descending

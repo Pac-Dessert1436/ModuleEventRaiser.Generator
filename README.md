@@ -1,8 +1,7 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules, stable and feature-complete for its intended use case.
 
-> - **v1.1.7.3 Bug Fix**: Fixed invalid leading comma generation in method signatures when event parameter list is empty (caused compilation error).
-> - **v1.1.7.4 Bug Fix**: Prevented null event actions from being scheduled into the event queue.
+> **v1.1.7.5 Latest Update**: Supports multiple namespaces - now you can define event modules in different namespaces - and this marks ultimate feature completeness!
 
 **New in version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
@@ -12,84 +11,73 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
 
-## 📦 Version Notes: 1.1.6 → 1.1.7+
+## 📦 Version Notes: 1.1.5 → 1.1.7.5
 
-### What's New in 1.1.7+?
+### 🎉 Ultimate Feature Completeness Achieved!
 
-Version 1.1.7+ includes significant enhancements to both the event scheduling system and asynchronous event handling, making it more powerful and flexible than ever.
+Version 1.1.7.5 represents the pinnacle of ModuleEventRaiser.Generator's evolution, delivering **ultimate feature completeness** with comprehensive namespace support and refined functionality.
 
-### 🔥 Key New Features
+### 🔥 Key New Features in 1.1.7.5
 
-#### 1. Priority-Based Event Scheduling
+#### 1. Multi-Namespace Support (Ultimate Feature)
+- **Namespace isolation**: Define event modules in different namespaces without conflicts
+- **Proper imports**: Automatic namespace handling for generated code
+- **Enterprise-ready**: Perfect for large projects with organized namespace structure
+- **Flexible architecture**: Support for complex project hierarchies
+
+#### 2. Priority-Based Event Scheduling
 - **Control event order**: Assign priority values to scheduled events
 - **Higher priority first**: Events with larger priority values are raised before lower ones
 - **Flexible syntax**: `ScheduleEvent_xxx(...parameters, Optional withPriority As Integer = 0)`
 
-#### 2. Enhanced Asynchronous Methods
+#### 3. Enhanced Asynchronous Methods
 - **Optional delay support**: Add `withDelaySec` parameter to async methods
 - **Validation**: Automatic validation to ensure non-negative delay values
 - **Improved syntax**: `RaiseEventAsync_xxx(...parameters, Optional withDelaySec As Double = 0)`
 
-#### 3. Improved Documentation
+#### 4. Improved Documentation & Code Quality
 - **Better XML docs**: Enhanced parameter descriptions and method documentation
 - **Clearer usage guidelines**: Improved comments for game framework compatibility
 - **Self-documenting code**: More descriptive generated code
 
-### 🛠️ Technical Changes
+### 🛠️ Technical Evolution
 
-| Feature | Version 1.1.6 | Version 1.1.7+ |
-|---------|---------------|---------------|
-| ScheduleEvent signature | `ScheduleEvent_xxx(...params)` | `ScheduleEvent_xxx(...params, Optional withPriority As Integer = 0)` |
-| RaiseEventAsync signature | `RaiseEventAsync_xxx(...params)` | `RaiseEventAsync_xxx(...params, Optional withDelaySec As Double = 0)` |
-| Event scheduling order | FIFO queue | Priority-based (FIFO within same priority) |
-| Async delay support | ❌ No | ✅ Yes |
+| Feature | 1.1.5 | 1.1.6 | 1.1.7.5 |
+|---------|-------|-------|---------|
+| Single Module Support | ✅ Excellent | ✅ Excellent | ✅ Excellent |
+| Multi-Module Support | ⚠️ Limited | ✅ Full | ✅ Full |
+| **Multi-Namespace Support** | ❌ No | ❌ No | ✅ **Ultimate** |
+| Priority Scheduling | ❌ No | ❌ No | ✅ Yes |
+| Async Delays | ❌ No | ❌ No | ✅ Yes |
+| Documentation Quality | Good | Good | Excellent |
 
-### 🎯 Who Should Upgrade?
+### 🎯 Who Should Upgrade to 1.1.7.5?
+
+#### 🚀 **Must Upgrade**
+- **Enterprise developers**: Working with multiple namespaces and complex project structures
+- **Large project teams**: Need namespace isolation for better code organization
+- **Library authors**: Want the most robust and feature-complete version
+- **Future-proofing**: Planning for project growth and complexity
+
+#### ✅ **Recommended Upgrade**
 - **Game developers**: Priority-based scheduling helps manage event order
 - **Async users**: Delay support adds flexibility to async event handling
 - **Documentation lovers**: Improved XML docs for better IntelliSense
-- **Everyone**: Backward-compatible with all previous versions
 
-### 📊 Version Comparison
+#### 🤝 **Can Stay on Previous Versions**
+- **Simple projects**: Single module, single namespace usage
+- **Stability-focused**: Current version works perfectly for your needs
 
-| Version | Priority Scheduling | Async Delays | Multi-Module Support | Documentation |
-|---------|---------------------|--------------|----------------------|---------------|
-| 1.1.5 | ❌ No | ❌ No | ⚠️ Limited | Good |
-| 1.1.6 | ❌ No | ❌ No | ✅ Full | Good |
-| 1.1.7+ | ✅ Yes | ✅ Yes | ✅ Full | Excellent |
+### 📊 Version Comparison Matrix
 
----
-
-## 📦 Version Notes: 1.1.5 → 1.1.6
-*__Version 1.1.5 is stable and fully functional. If you're using a single module for your events, there's no need to upgrade__*. Everything works perfectly with only one module for events in your VB.NET project on version 1.1.5.
-
-### What's New in 1.1.6?
-
-Version 1.1.6 includes a small but meaningful improvement for projects that use **multiple event modules** (e.g., `GameEvents`, `UIEvents`, `AudioEvents`).
-
-### 🔧 The Change
-Method calls inside generated `ScheduleEvent_xxx()` methods are now **fully qualified**, eliminating any potential module conflicts.
-
-| Version | Generated Code | Works with 1 Module | Works with 2+ Modules |
-|---------|----------------|---------------------|------------------------|
-| 1.1.5 | `ScheduleEventAction(...)` | ✅ Yes | ⚠️ May conflict |
-| 1.1.6 | `{ModuleName}EventScheduler.ScheduleEventAction(...)` | ✅ Yes | ✅ Yes |
-
-### 👥 Who Should Upgrade?
-- You're using **multiple event modules** in your project
-- You want to ensure **no ambiguity** in method resolution
-- You prefer **explicit, self-documenting code**
-
-### 🤝 Who Can Stay on 1.1.5?
-- You're using a **single module** for all events
-- Your current setup **already works** and you're happy with it
-- You prefer **stability over the latest tweaks**
-
-Both versions are valid. Choose what feels right for your project.
-
----
-
-> 💡 **Tip**: If you're unsure, version 1.1.7+ is always a safe upgrade - it's backward-compatible with all previous versions and adds powerful new features.
+| Feature | 1.1.5 | 1.1.6 | 1.1.7.5 |
+|---------|-------|-------|---------|
+| **Namespace Support** | Single | Single | **Multiple** |
+| Module Conflicts | Possible | Resolved | **Eliminated** |
+| Priority Scheduling | ❌ No | ❌ No | ✅ Yes |
+| Async Delay Support | ❌ No | ❌ No | ✅ Yes |
+| Code Organization | Basic | Good | **Enterprise** |
+| Scalability | Limited | Good | **Ultimate** |
 
 ## Features
 - Automatically generate `RaiseEvent_xxx` methods for Module events
@@ -105,9 +93,12 @@ Both versions are valid. Choose what feels right for your project.
 - **New in 1.1.6**: **Multiple event module support** - fully qualified method calls for no ambiguity
 - **New in 1.1.7**: **Priority-based event scheduling** - control event order with priority values
 - **New in 1.1.7**: **Enhanced asynchronous methods** - optional delay support with validation
+- **New in 1.1.7.5**: **Multi-namespace support** - ultimate feature completeness for enterprise projects
 
 ## Usage Example
-Define your events in a partial module (like `MyEvents.vb`):
+
+### Basic Single Namespace Usage
+Define your events in a partial module (like `MyEvents.vb`), which will be located in your project's root namespace:
 ```vb
 Partial Public Module MyEvents
     Public Event TemperatureChanged(temperature As Double)
@@ -115,6 +106,44 @@ Partial Public Module MyEvents
     Public Event LightLevelChanged(lightLevel As Integer)
 End Module
 ```
+
+### Multi-Namespace Support (NEW in 1.1.7.5)
+Define event modules in different namespaces for better organization:
+
+**GameEvents.vb** (in `MyGame.Events` namespace):
+```vb
+Namespace MyGame.Events
+    Partial Public Module GameEvents
+        Public Event PlayerDied(playerId As Integer)
+        Public Event ScoreUpdated(newScore As Integer)
+        Public Event LevelCompleted(levelId As Integer)
+    End Module
+End Namespace
+```
+
+**UIEvents.vb** (in `MyGame.UI.Events` namespace):
+```vb
+Namespace MyGame.UI.Events
+    Partial Public Module UIEvents
+        Public Event ButtonClicked(buttonName As String)
+        Public Event MenuOpened(menuId As Integer)
+        Public Event DialogClosed(dialogId As Integer)
+    End Module
+End Namespace
+```
+
+**AudioEvents.vb** (in `MyGame.Audio.Events` namespace):
+```vb
+Namespace MyGame.Audio.Events
+    Partial Public Module AudioEvents
+        Public Event SoundPlayed(soundId As Integer)
+        Public Event MusicChanged(trackId As Integer)
+        Public Event VolumeChanged(newVolume As Double)
+    End Module
+End Namespace
+```
+
+The generator automatically handles namespace isolation and generates proper code for each namespace.
 
 The generator automatically creates:
 ```vb
@@ -181,6 +210,7 @@ Public Module MyEventsEventScheduler
     ''' <param name="priorityValue">The priority value of the event (default is 0).
     ''' Events with higher priority values are raised first.</param>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
+        ArgumentNullException.ThrowIfNull(eventAction)  ' Fixed in 1.1.7.4
         SyncLock _lock
             _pendingEvents.Enqueue((eventAction, priorityValue))
         End SyncLock
@@ -194,7 +224,8 @@ Public Module MyEventsEventScheduler
     ''' and FIFO order within the same priority level.
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
-        Dim actionsToRaise = Array.Empty(Of Action)()
+        ' Key fix in 1.1.7.5: Add explicit typing in case of "Option Infer Off"
+        Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
             actionsToRaise = Aggregate e In _pendingEvents Order By e.priority Descending
