@@ -12,6 +12,7 @@ Public NotInheritable Class EventRaiserGen
         Public Property ModuleName As String
         Public Property Events As List(Of EventInfo)
         Public Property RequiredNamespaces As List(Of String)
+        Public Property ContainingNamespace As String
     End Class
 
     Private Class EventInfo
@@ -23,6 +24,7 @@ Public NotInheritable Class EventRaiserGen
         Public Property Location As Location
         Public Property IsDelegatePattern As Boolean
         Public Property DelegateTypeName As String
+        Public Property ContainingNamespace As String
     End Class
 
     Private Class ParameterInfo
@@ -67,8 +69,7 @@ Public NotInheritable Class EventRaiserGen
                     ' This is an "As EventHandler" style event
                     isDelegateEvent = True
                     delegateTypeName = eventDecl.AsClause.Type.ToString()
-
-                    ' USE the GetParametersFromDelegate function here!
+                    ' NOTE: Use the GetParametersFromDelegate function here!
                     parameters = GetParametersFromDelegate(eventDecl.AsClause.Type, semanticModel)
 
                     ' Collect namespaces from the extracted parameters
@@ -76,8 +77,7 @@ Public NotInheritable Class EventRaiserGen
                         If Not String.IsNullOrEmpty(pInfo.ContainingNamespace) Then
                             requiredNamespaces.Add(pInfo.ContainingNamespace)
                         End If
-                    Next
-
+                    Next pInfo
                     ' Also add the delegate's namespace if needed
                     Dim typeInfo = semanticModel.GetTypeInfo(eventDecl.AsClause.Type)
                     If typeInfo.Type IsNot Nothing Then
@@ -99,6 +99,13 @@ Public NotInheritable Class EventRaiserGen
                     Next
                 End If
 
+                ' Get the containing namespace from the module
+                Dim containingNamespace As String = String.Empty
+                Dim namespaceDecl = moduleBlock.FirstAncestorOrSelf(Of NamespaceBlockSyntax)()
+                If namespaceDecl IsNot Nothing Then
+                    containingNamespace = namespaceDecl.NamespaceStatement.Name.ToString()
+                End If
+
                 Return New EventInfo With {
                     .EventName = eventDecl.Identifier.ValueText,
                     .ModuleName = moduleStatement.Identifier.ValueText,
@@ -108,7 +115,8 @@ Public NotInheritable Class EventRaiserGen
                     .RequiredNamespaces = requiredNamespaces,
                     .Location = moduleStatement.GetLocation(),
                     .IsDelegatePattern = isDelegateEvent,
-                    .DelegateTypeName = delegateTypeName
+                    .DelegateTypeName = delegateTypeName,
+                    .ContainingNamespace = containingNamespace
                 }
             End Function
         )
@@ -123,24 +131,33 @@ Public NotInheritable Class EventRaiserGen
                        Dim moduleGroups = events.GroupBy(Function(e) e.ModuleName)
 
                        ' For each module, merge the required namespaces from all events
-                       Return moduleGroups.Select(Function(group)
-                                                      Dim moduleName = group.Key
-                                                      Dim eventsInModule = group.ToList()
+                       Return moduleGroups.Select(
+                           Function(group)
+                               Dim moduleName = group.Key
+                               Dim eventsInModule = group.ToList()
 
-                                                      ' Merge all namespaces from all events in this module
-                                                      Dim allNamespaces = New HashSet(Of String)()
-                                                      For Each evt In eventsInModule
-                                                          If evt.RequiredNamespaces IsNot Nothing Then
-                                                              allNamespaces.UnionWith(evt.RequiredNamespaces)
-                                                          End If
-                                                      Next evt
+                               ' Merge all namespaces from all events in this module
+                               Dim allNamespaces = New HashSet(Of String)()
+                               For Each evt In eventsInModule
+                                   If evt.RequiredNamespaces IsNot Nothing Then
+                                       allNamespaces.UnionWith(evt.RequiredNamespaces)
+                                   End If
+                               Next evt
 
-                                                      Return New ModuleInfo With {
-                                                          .ModuleName = moduleName,
-                                                          .Events = eventsInModule,
-                                                          .RequiredNamespaces = allNamespaces.ToList()
-                                                      }
-                                                  End Function).ToList()
+                               ' Extract the containing namespace from the first event (should be
+                               ' consistent for all events in same module)
+                               Dim containingNamespace As String = String.Empty
+                               Dim firstEventNsp = eventsInModule(0).ContainingNamespace
+                               If eventsInModule.Count > 0 AndAlso Not String.
+                                   IsNullOrEmpty(firstEventNsp) Then containingNamespace = firstEventNsp
+
+                               Return New ModuleInfo With {
+                                    .ModuleName = moduleName,
+                                    .Events = eventsInModule,
+                                    .RequiredNamespaces = allNamespaces.ToList(),
+                                    .ContainingNamespace = containingNamespace
+                                }
+                           End Function).ToList()
                    End Function)
 
         ' Register the source output
@@ -184,7 +201,7 @@ Public NotInheritable Class EventRaiserGen
                         .ParamType = paramType,
                         .ContainingNamespace = containingNamespace
                     })
-                Next
+                Next param
             End If
         End If
 
@@ -297,6 +314,13 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         End If
         code.AppendLine()
 
+        ' Add namespace if the module is inside a namespace
+        Dim hasNamespace As Boolean = Not String.IsNullOrEmpty(modInfo.ContainingNamespace)
+        If hasNamespace Then
+            code.AppendLine($"Namespace {modInfo.ContainingNamespace}")
+            code.AppendLine()
+        End If
+
         ' Begin module
         code.AppendLine($"Partial Public Module {modInfo.ModuleName}")
         code.AppendLine()
@@ -361,7 +385,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    End Function")
             code.AppendLine()
 
-            ' New in version 1.1.0: Add "ScheduleEvent_xxx" methods for each event
+            ' New in version 1.1.0+: Add "ScheduleEvent_xxx" methods for each event
             code.AppendLine($"    ''' <summary>")
             code.AppendLine($"    ''' Schedules the {evtInfo.EventName} event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).")
             code.AppendLine($"    ''' </summary>")
@@ -459,6 +483,12 @@ Public Module {modInfo.ModuleName}EventScheduler
         End SyncLock
     End Sub
 End Module")
+
+        ' Finally, close namespace if we opened one at the beginning
+        If hasNamespace Then
+            code.AppendLine()
+            code.AppendLine("End Namespace")
+        End If
 
         Return code.ToString()
     End Function

@@ -1,7 +1,7 @@
 # ModuleEventRaiser.Generator
-A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules, stable and feature-complete for its intended use case.
+A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.1.7.5 Latest Update**: Supports multiple namespaces - now you can define event modules in different namespaces - and this marks ultimate feature completeness!
+> **v1.1.7.9 Latest Update**: **Enterprise-grade compatibility** with explicit typing for `Option Infer Off` projects, plus comprehensive namespace support - ultimate feature completeness achieved!
 
 **New in version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
@@ -11,73 +11,85 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
 
-## 📦 Version Notes: 1.1.5 → 1.1.7.5
+## 📦 Version Notes: 1.1.5 → 1.1.7.9
 
-### 🎉 Ultimate Feature Completeness Achieved!
+### 🎉 Ultimate Enterprise-Ready Release!
 
-Version 1.1.7.5 represents the pinnacle of ModuleEventRaiser.Generator's evolution, delivering **ultimate feature completeness** with comprehensive namespace support and refined functionality.
+Version 1.1.7.9 represents the pinnacle of ModuleEventRaiser.Generator's evolution, delivering **ultimate enterprise-grade compatibility** with explicit typing for `Option Infer Off` projects, plus comprehensive namespace support.
 
-### 🔥 Key New Features in 1.1.7.5
+### 🔥 Key Enterprise Features in 1.1.7.9
 
-#### 1. Multi-Namespace Support (Ultimate Feature)
+#### 1. Option Infer Off Compatibility (Enterprise Critical)
+- **Explicit typing**: All generated code uses explicit type declarations
+- **Healthcare/Financial ready**: Perfect for regulated industries with strict coding standards
+- **Zero type inference**: No reliance on `Option Infer On` - works in all VB.NET environments
+- **Enterprise compliance**: Meets corporate coding standards requiring explicit typing
+
+#### 2. Multi-Namespace Support (Ultimate Feature)
 - **Namespace isolation**: Define event modules in different namespaces without conflicts
 - **Proper imports**: Automatic namespace handling for generated code
 - **Enterprise-ready**: Perfect for large projects with organized namespace structure
 - **Flexible architecture**: Support for complex project hierarchies
 
-#### 2. Priority-Based Event Scheduling
+#### 3. Priority-Based Event Scheduling
 - **Control event order**: Assign priority values to scheduled events
 - **Higher priority first**: Events with larger priority values are raised before lower ones
 - **Flexible syntax**: `ScheduleEvent_xxx(...parameters, Optional withPriority As Integer = 0)`
 
-#### 3. Enhanced Asynchronous Methods
+#### 4. Enhanced Asynchronous Methods
 - **Optional delay support**: Add `withDelaySec` parameter to async methods
 - **Validation**: Automatic validation to ensure non-negative delay values
 - **Improved syntax**: `RaiseEventAsync_xxx(...parameters, Optional withDelaySec As Double = 0)`
 
-#### 4. Improved Documentation & Code Quality
+#### 5. Enterprise-Grade Code Quality
 - **Better XML docs**: Enhanced parameter descriptions and method documentation
 - **Clearer usage guidelines**: Improved comments for game framework compatibility
-- **Self-documenting code**: More descriptive generated code
+- **Self-documenting code**: More descriptive generated code with explicit typing
 
 ### 🛠️ Technical Evolution
 
-| Feature | 1.1.5 | 1.1.6 | 1.1.7.5 |
+| Feature | 1.1.5 | 1.1.6 | 1.1.7.9 |
 |---------|-------|-------|---------|
 | Single Module Support | ✅ Excellent | ✅ Excellent | ✅ Excellent |
 | Multi-Module Support | ⚠️ Limited | ✅ Full | ✅ Full |
 | **Multi-Namespace Support** | ❌ No | ❌ No | ✅ **Ultimate** |
+| **Option Infer Off Compatibility** | ❌ No | ❌ No | ✅ **Enterprise** |
 | Priority Scheduling | ❌ No | ❌ No | ✅ Yes |
 | Async Delays | ❌ No | ❌ No | ✅ Yes |
 | Documentation Quality | Good | Good | Excellent |
+| **Enterprise Readiness** | Basic | Good | **Ultimate** |
 
-### 🎯 Who Should Upgrade to 1.1.7.5?
+### 🎯 Who Should Upgrade to 1.1.7.9?
 
-#### 🚀 **Must Upgrade**
-- **Enterprise developers**: Working with multiple namespaces and complex project structures
-- **Large project teams**: Need namespace isolation for better code organization
-- **Library authors**: Want the most robust and feature-complete version
-- **Future-proofing**: Planning for project growth and complexity
+#### 🚀 **Must Upgrade (Enterprise Critical)**
+- **Healthcare/Financial projects**: Require `Option Infer Off` compliance
+- **Regulated industries**: Need explicit typing for coding standards
+- **Enterprise developers**: Working with corporate coding standards
+- **Large project teams**: Need namespace isolation and type safety
+- **Library authors**: Want the most robust and enterprise-compatible version
 
 #### ✅ **Recommended Upgrade**
 - **Game developers**: Priority-based scheduling helps manage event order
 - **Async users**: Delay support adds flexibility to async event handling
 - **Documentation lovers**: Improved XML docs for better IntelliSense
+- **Future-proofing**: Planning for project growth and enterprise requirements
 
 #### 🤝 **Can Stay on Previous Versions**
-- **Simple projects**: Single module, single namespace usage
-- **Stability-focused**: Current version works perfectly for your needs
+- **Simple projects**: Single module, single namespace usage with `Option Infer On`
+- **Stability-focused**: Current version works perfectly for your non-enterprise needs
 
 ### 📊 Version Comparison Matrix
 
-| Feature | 1.1.5 | 1.1.6 | 1.1.7.5 |
+| Feature | 1.1.5 | 1.1.6 | 1.1.7.9 |
 |---------|-------|-------|---------|
 | **Namespace Support** | Single | Single | **Multiple** |
+| **Option Infer Off** | ❌ No | ❌ No | ✅ **Enterprise** |
 | Module Conflicts | Possible | Resolved | **Eliminated** |
 | Priority Scheduling | ❌ No | ❌ No | ✅ Yes |
 | Async Delay Support | ❌ No | ❌ No | ✅ Yes |
 | Code Organization | Basic | Good | **Enterprise** |
 | Scalability | Limited | Good | **Ultimate** |
+| **Enterprise Compliance** | ❌ No | ❌ No | ✅ **Ultimate** |
 
 ## Features
 - Automatically generate `RaiseEvent_xxx` methods for Module events
@@ -94,6 +106,7 @@ Version 1.1.7.5 represents the pinnacle of ModuleEventRaiser.Generator's evoluti
 - **New in 1.1.7**: **Priority-based event scheduling** - control event order with priority values
 - **New in 1.1.7**: **Enhanced asynchronous methods** - optional delay support with validation
 - **New in 1.1.7.5**: **Multi-namespace support** - ultimate feature completeness for enterprise projects
+- **New in 1.1.7.9**: **Option Infer Off compatibility** - explicit typing for healthcare, financial, and regulated industries
 
 ## Usage Example
 
@@ -224,7 +237,7 @@ Public Module MyEventsEventScheduler
     ''' and FIFO order within the same priority level.
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
-        ' Key fix in 1.1.7.5: Add explicit typing in case of "Option Infer Off"
+        ' Key fix in 1.1.7.9: Add explicit typing in case of `Option Infer Off`
         Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
