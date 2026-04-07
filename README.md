@@ -1,7 +1,7 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.1.7.9 Latest Update**: **Enterprise-grade compatibility** with explicit typing for `Option Infer Off` projects, plus comprehensive namespace support - ultimate feature completeness achieved!
+> **v1.1.7.10 Latest Update**: Fixed `ArgumentOutOfRangeException.ThrowIfNegative` compatibility for legacy .NET versions. If you are using .NET 8+, feel free to stay on 1.1.7.9.
 
 **New in version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
@@ -10,6 +10,18 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 - Comprehensive **event scheduling system** with thread-safe queue management, perfect for game frameworks (MonoGame, FNA, etc.)
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
+
+## 📦 Version Notes: 1.1.7.9 → 1.1.7.10
+
+This is a compatibility fix for legacy .NET versions. If you are using .NET 8+, you can stay on 1.1.7.9.
+
+The subroutine `ArgumentOutOfRangeException.ThrowIfNegative` requires .NET SDK 8.0 or later. For legacy .NET support, this API call has been replaced with a traditional if-check:
+
+```vb
+If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+```
+
+> **Note**: If you want to use the multi-namespace feature, please upgrade to 1.1.7.9 or later. Version 1.1.7.5 does NOT support multiple namespaces as planned.
 
 ## 📦 Version Notes: 1.1.5 → 1.1.7.9
 
@@ -105,7 +117,7 @@ Version 1.1.7.9 represents the pinnacle of ModuleEventRaiser.Generator's evoluti
 - **New in 1.1.6**: **Multiple event module support** - fully qualified method calls for no ambiguity
 - **New in 1.1.7**: **Priority-based event scheduling** - control event order with priority values
 - **New in 1.1.7**: **Enhanced asynchronous methods** - optional delay support with validation
-- **New in 1.1.7.5**: **Multi-namespace support** - ultimate feature completeness for enterprise projects
+- **New in 1.1.7.9**: **Multi-namespace support** - ultimate feature completeness for enterprise projects (NOT in 1.1.7.5)
 - **New in 1.1.7.9**: **Option Infer Off compatibility** - explicit typing for healthcare, financial, and regulated industries
 
 ## Usage Example
@@ -120,12 +132,14 @@ Partial Public Module MyEvents
 End Module
 ```
 
-### Multi-Namespace Support (NEW in 1.1.7.5)
-Define event modules in different namespaces for better organization:
+### Multi-Namespace Support (NEW in 1.1.7.9)
+> **Important Note**: Version 1.1.7.5 does NOT support multiple namespaces as planned.
 
-**GameEvents.vb** (in `MyGame.Events` namespace):
+Define event modules in different namespaces for better organization. Note that the namespace declarations are natually on top of the project's root namespace:
+
+**GameEvents.vb** (in `{RootNamespace}.Events` namespace):
 ```vb
-Namespace MyGame.Events
+Namespace Events
     Partial Public Module GameEvents
         Public Event PlayerDied(playerId As Integer)
         Public Event ScoreUpdated(newScore As Integer)
@@ -134,9 +148,9 @@ Namespace MyGame.Events
 End Namespace
 ```
 
-**UIEvents.vb** (in `MyGame.UI.Events` namespace):
+**UIEvents.vb** (in `{RootNamespace}.UI.Events` namespace):
 ```vb
-Namespace MyGame.UI.Events
+Namespace UI.Events
     Partial Public Module UIEvents
         Public Event ButtonClicked(buttonName As String)
         Public Event MenuOpened(menuId As Integer)
@@ -145,9 +159,9 @@ Namespace MyGame.UI.Events
 End Namespace
 ```
 
-**AudioEvents.vb** (in `MyGame.Audio.Events` namespace):
+**AudioEvents.vb** (in `{RootNamespace}.Audio.Events` namespace):
 ```vb
-Namespace MyGame.Audio.Events
+Namespace Audio.Events
     Partial Public Module AudioEvents
         Public Event SoundPlayed(soundId As Integer)
         Public Event MusicChanged(trackId As Integer)
@@ -156,10 +170,13 @@ Namespace MyGame.Audio.Events
 End Namespace
 ```
 
-The generator automatically handles namespace isolation and generates proper code for each namespace.
+Namespace isolation and proper code generation are ensured for each namespace.
 
-The generator automatically creates:
+### Output: Generated Event Raiser Methods
 ```vb
+Option Explicit On
+Option Strict On
+
 Partial Public Module MyEvents
     Public Sub RaiseEvent_TemperatureChanged(temperature As Double)
         RaiseEvent TemperatureChanged(temperature)
@@ -175,19 +192,19 @@ Partial Public Module MyEvents
 
     ' --- Asynchronous event raising methods (available in version 1.0.9+) ---
     Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Double, Optional withDelaySec As Double = 0) As Task
-        ArgumentOutOfRangeException.ThrowIfNegative(withDelaySec)
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
     End Function
 
     Public Async Function RaiseEventAsync_HumidityChanged(humidity As Double, Optional withDelaySec As Double = 0) As Task
-        ArgumentOutOfRangeException.ThrowIfNegative(withDelaySec)
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent HumidityChanged(humidity))
     End Function
 
     Public Async Function RaiseEventAsync_LightLevelChanged(lightLevel As Integer, Optional withDelaySec As Double = 0) As Task
-        ArgumentOutOfRangeException.ThrowIfNegative(withDelaySec)
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent LightLevelChanged(lightLevel))
     End Function
