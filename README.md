@@ -1,5 +1,11 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
+> 📝 **Note on v1.1.7.10 Documentation**
+>
+> Due to NuGet package packaging limitations, the embedded README in the NuGet package cannot be changed, retaining a minor example typo (using a literal string instead of the expected `NameOf`). **The actual implementation always correctly uses `NameOf(withDelaySec)` for parameter validation** to ensure user-friendly exception messages.
+> 
+> **This discrepancy is purely documentation-related and does not affect functionality.** The source generator is already feature-complete and fully functional - no further updates will be made for this cosmetic issue.
+
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
 
@@ -90,7 +96,7 @@ End Module
 ```
 
 #### Multi-Namespace Support (Actually introduced in 1.1.7.9+)
-Define event modules in different namespaces for better organization. Note that the namespace declarations are natually on top of the project's root namespace:
+Define event modules in different namespaces for better organization. Note that the namespace declarations are naturally on top of the project's root namespace:
 
 **GameEvents.vb** (in `{RootNamespace}.Events` namespace):
 ```vb
@@ -160,7 +166,7 @@ Partial Public Module MyEvents
     End Sub
 
     Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Double, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
     End Function
@@ -174,7 +180,7 @@ Partial Public Module MyEvents
     End Sub
 
     Public Async Function RaiseEventAsync_HumidityChanged(humidity As Double, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent HumidityChanged(humidity))
     End Function
@@ -188,7 +194,7 @@ Partial Public Module MyEvents
     End Sub
 
     Public Async Function RaiseEventAsync_LightLevelChanged(lightLevel As Integer, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent LightLevelChanged(lightLevel))
     End Function
@@ -203,7 +209,7 @@ Partial Public Module MyEvents
     End Sub
 
     Public Async Function RaiseEventAsync_MyEvent(sender As Object, e As EventArgs, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent MyEvent(sender, e))
     End Sub
