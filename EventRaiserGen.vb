@@ -379,7 +379,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    ''' For game logic execution in game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_{evtInfo.EventName}' method instead.")
             code.AppendLine($"    ''' </remarks>")
             code.AppendLine($"    Public Async Function RaiseEventAsync_{evtInfo.EventName}({params}{comma}Optional withDelaySec As Double = 0) As Task")
-            code.AppendLine($"        ArgumentOutOfRangeException.ThrowIfNegative(withDelaySec)")
+            code.AppendLine($"        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), ""Delay seconds must be non-negative."")")
             code.AppendLine($"        If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))")
             code.AppendLine($"        Await Task.Run(Sub() RaiseEvent {evtInfo.EventName}({args}))")
             code.AppendLine($"    End Function")
