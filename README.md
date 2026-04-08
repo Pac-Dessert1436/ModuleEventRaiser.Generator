@@ -4,7 +4,7 @@
 >
 > Due to NuGet package packaging limitations, the embedded README in the NuGet package cannot be changed, retaining a minor example typo (using a literal string instead of the expected `NameOf`). **The actual implementation always correctly uses `NameOf(withDelaySec)` for parameter validation** to ensure user-friendly exception messages.
 > 
-> **This discrepancy is purely documentation-related and does not affect functionality.** The source generator is already feature-complete and fully functional - no further updates will be made for this cosmetic issue.
+> **This discrepancy is purely documentation-related and does not affect functionality.** The source generator is already feature-complete and fully functional - no further updates will be made for this cosmetic issue. **Additionally, key points regarding memory management with events are now included in the section "[Important Notes for This Package](#important-notes-for-this-package)".**
 
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
@@ -21,7 +21,46 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
 
-**Important Notes:**
+## Important Notes for This Package
+### ⚠️ Critical: Memory Management with Events
+Events declared in VB.NET modules and raised via this package involve **standard .NET strong references**. When your event handlers subscribed in module events are linked to short-lived objects, keep in mind that **the event handlers MUST be always removed** the moment the short-lived objects are disposed:
+
+```vb
+Public Class MyApp
+    Implements IDisposable
+
+    Private _state As AppState
+    Private _isDisposed As Boolean
+    ' ... more fields & properties ...
+
+    Public Sub New()
+        AddHandler MyEvents.StateChanged, AddressOf OnStateChanged
+    End Sub
+
+    ' ... more instance/static methods ...
+
+    Public Sub Dispose() Implements IDisposable.Dispose
+        Dispose(True)
+        GC.SuppressFinalize(Me)
+    End Sub
+
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not _isDisposed Then
+            If disposing Then
+                ' CRITICAL: Remove event handlers right here!
+                RemoveHandler MyEvents.StateChanged, AddressOf OnStateChanged
+
+                ' ... more managed resources disposed here ...
+            End If
+            ' Optional: Dispose unmanaged resources
+            _isDisposed = True
+        End If
+    End Sub
+End Class
+```
+**Why this matters**: The package does NOT contain methods that automatically remove event handlers. NEITHER would the native `Handles` keyword in VB.NET automatically do so. *__Without proper cleanup, especially when the event publishers are long-lived in your VB.NET app, the memory leak will definitely take place.__*
+
+### Other Notes
 - The source generator only works with VB.NET modules and does not support classes or structures.
 - The generator includes `Imports System` by default in generated files.
 - Additional imports for custom types are now properly recognized - no other settings required.
