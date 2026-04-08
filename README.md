@@ -1,8 +1,15 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> 📝 **Note on v1.1.7.10 Documentation**
+> 📝 **Note on Documentation Through 1.1.7.9 and 1.1.7.10**
 >
-> Due to NuGet package packaging limitations, the embedded README in the NuGet package cannot be changed, retaining a minor example typo (using a literal string instead of the expected `NameOf`). **The actual implementation always correctly uses `NameOf(withDelaySec)` for parameter validation** to ensure user-friendly exception messages.
+> Due to NuGet package packaging limitations, **the embedded README.md in the NuGet package cannot be changed**. The existing wrong source code in 1.1.7.5 and **wrong documentation in 1.1.7.9** have misled a lot of users.
+> 
+> **NEVER use 1.1.7.5 since it is broken.** Version 1.1.7.5 does NOT have multi-namespace support despite what the frozen NuGet documentation says.
+> 
+> - 1.1.7.9+ → Namespace support works ✅
+> - 1.1.7.5 → Namespace support broken ❌ (deprecated, unlisted)
+>
+> Version 1.1.7.10 has a documentation typo, where it uses a literal string instead of the expected `NameOf`. **The actual implementation always correctly uses `NameOf(withDelaySec)` for parameter validation** to ensure user-friendly exception messages.
 > 
 > **This discrepancy is purely documentation-related and does not affect functionality.** The source generator is already feature-complete and fully functional - no further updates will be made for this cosmetic issue. **Additionally, key points regarding memory management with events are now included in the section "[Important Notes for This Package](#important-notes-for-this-package)".**
 
