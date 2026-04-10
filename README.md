@@ -1,27 +1,53 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.1.7.10 Latest Update**: Fixed `ArgumentOutOfRangeException.ThrowIfNegative` compatibility for legacy .NET versions. If you are using .NET 8+, feel free to stay on 1.1.7.9.
+> **v1.1.8 Latest Update**: Enhanced namespace support with proper namespace wrapping and module accessibility detection. Ultimate enterprise-grade code generation quality achieved!
 
-**New in version 1.1.7+**: 
+**Existing features in version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
 - **Enhanced asynchronous methods** - add optional delays to async event raising
 - **Improved parameter documentation** - better XML documentation for generated methods
 - Comprehensive **event scheduling system** with thread-safe queue management, perfect for game frameworks (MonoGame, FNA, etc.)
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
+- **Namespace support** - properly wraps events in namespaces, preventing naming conflicts
+- **`Option Infer Off` compatibility** - fully compatible with `Option Infer Off` for strict coding standards
+- **Legacy .NET support** - compatible with legacy .NET version such as .NET 6.0 and .NET 7.0, by replacing `ArgumentOutOfRangeException.ThrowIfNegative` with a traditional if-check.
 
-## 📦 Version Notes: 1.1.7.9 → 1.1.7.10
+## 📦 Version Notes: 1.1.7.9+ → 1.1.8
 
-This is a compatibility fix for legacy .NET versions. If you are using .NET 8+, you can stay on 1.1.7.9.
+### 🎯 Module Accessibility Detection Enhancement
 
-The subroutine `ArgumentOutOfRangeException.ThrowIfNegative` requires .NET SDK 8.0 or later. For legacy .NET support, this API call has been replaced with a traditional if-check:
+Version 1.1.8 delivers a targeted improvement to module accessibility detection, building on the solid namespace foundation established in version 1.1.7.9+.
 
-```vb
-If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
-```
+### 🔧 Key Improvement in 1.1.8
 
-> **Note**: If you want to use the multi-namespace feature, please upgrade to 1.1.7.9 or later. Version 1.1.7.5 does NOT support multiple namespaces as planned.
+#### Module Accessibility Detection
+- **Public/Friend module support**: Automatic detection of module accessibility levels using semantic analysis
+- **Proper code generation**: Generated methods respect the module's original accessibility (Public/Friend)
+- **Enterprise compliance**: Better handling of internal and public module scenarios in complex projects
+- **Semantic analysis**: Module accessibility detection is based on `gsc.SemanticModel.GetDeclaredSymbol(moduleStatement).DeclaredAccessibility`
+
+### 🛠️ Technical Change
+
+| Feature | 1.1.7.9 | 1.1.7.10 | 1.1.8 |
+|---------|---------|----------|-------|
+| Legacy .NET support | ❌ No  | ✅ Yes | ✅ **Yes** |
+| **Module accessibility detection** | ❌ No | ❌ No | ✅ **Yes** |
+| Namespace support | ✅ Excellent | ✅ Excellent | ✅ **Excellent** |
+| Option Infer Off compatibility | ✅ Enterprise | ✅ Enterprise | ✅ **Enterprise** |
+| Code generation quality | ✅ Excellent | ✅ Excellent | ✅ **Enhanced** |
+
+### 🎯 Who Should Upgrade to 1.1.8?
+
+#### 🚀 **Must Upgrade**
+- **Library authors**: Need proper accessibility handling for Public/Friend module distribution
+- **Enterprise projects**: With mixed accessibility module scenarios
+- **Complex codebases**: Require accurate module accessibility detection
+
+#### ✅ **Recommended Upgrade**
+- **All users**: Better module accessibility handling
+- **Future-proofing**: Enhanced compatibility with accessibility requirements
 
 ## 📦 Version Notes: 1.1.5 → 1.1.7.9
 
@@ -111,14 +137,16 @@ Version 1.1.7.9 represents the pinnacle of ModuleEventRaiser.Generator's evoluti
 - Clean and easy to use
 - Automatically adds required `Imports` for recognized types
 - `RaiseEventAsync_xxx` methods for asynchronous event raising (available in version 1.0.9+)
-- **New in 1.1.2**: `ScheduleEvent_xxx` methods for deferred event raising
-- **New in 1.1.2**: Thread-safe event scheduler with queue management, perfect for game frameworks (MonoGame, FNA, etc.)
-- **New in 1.1.3**: Delegate pattern detection that supports both traditional parameter lists and delegate-based events like `As EventHandler`
-- **New in 1.1.6**: **Multiple event module support** - fully qualified method calls for no ambiguity
-- **New in 1.1.7**: **Priority-based event scheduling** - control event order with priority values
-- **New in 1.1.7**: **Enhanced asynchronous methods** - optional delay support with validation
-- **New in 1.1.7.9**: **Multi-namespace support** - ultimate feature completeness for enterprise projects (NOT in 1.1.7.5)
-- **New in 1.1.7.9**: **Option Infer Off compatibility** - explicit typing for healthcare, financial, and regulated industries
+- New in 1.1.2: `ScheduleEvent_xxx` methods for deferred event raising
+- New in 1.1.2: Thread-safe event scheduler with queue management, perfect for game frameworks (MonoGame, FNA, etc.)
+- New in 1.1.3: Delegate pattern detection that supports both traditional parameter lists and delegate-based events like `As EventHandler`
+- New in 1.1.6: **Multiple event module support** - fully qualified method calls for no ambiguity
+- New in 1.1.7: **Priority-based event scheduling** - control event order with priority values
+- New in 1.1.7: **Enhanced asynchronous methods** - optional delay support with validation
+- New in 1.1.7.9: **Multi-namespace support** - ultimate feature completeness for enterprise projects (NOT in 1.1.7.5)
+- New in 1.1.7.9: **`Option Infer Off` compatibility** - explicit typing for healthcare, financial, and regulated industries
+- New in 1.1.7.10: **Legacy .NET support** - `ArgumentOutOfRangeException.ThrowIfNegative` replaced with a traditional if-check.
+- **New in 1.1.8**: **Friend module support** - handle `Friend` modules with proper accessibility
 
 ## Usage Example
 
@@ -135,7 +163,7 @@ End Module
 ### Multi-Namespace Support (NEW in 1.1.7.9)
 > **Important Note**: Version 1.1.7.5 does NOT support multiple namespaces as planned.
 
-Define event modules in different namespaces for better organization. Note that the namespace declarations are natually on top of the project's root namespace:
+Define event modules in different namespaces for better organization. Note that the namespace declarations are naturally on top of the project's root namespace:
 
 **GameEvents.vb** (in `{RootNamespace}.Events` namespace):
 ```vb
@@ -177,6 +205,9 @@ Namespace isolation and proper code generation are ensured for each namespace.
 Option Explicit On
 Option Strict On
 
+Imports System
+' Necessary imports (and namespace declaration) are automatically added here.
+
 Partial Public Module MyEvents
     Public Sub RaiseEvent_TemperatureChanged(temperature As Double)
         RaiseEvent TemperatureChanged(temperature)
@@ -192,19 +223,19 @@ Partial Public Module MyEvents
 
     ' --- Asynchronous event raising methods (available in version 1.0.9+) ---
     Public Async Function RaiseEventAsync_TemperatureChanged(temperature As Double, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent TemperatureChanged(temperature))
     End Function
 
     Public Async Function RaiseEventAsync_HumidityChanged(humidity As Double, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent HumidityChanged(humidity))
     End Function
 
     Public Async Function RaiseEventAsync_LightLevelChanged(lightLevel As Integer, Optional withDelaySec As Double = 0) As Task
-        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException("withDelaySec", "Delay seconds must be non-negative.")
+        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), "Delay seconds must be non-negative.")
         If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))
         Await Task.Run(Sub() RaiseEvent LightLevelChanged(lightLevel))
     End Function
@@ -225,7 +256,7 @@ End Module
 
 ' --- Event scheduler module (NEW in version 1.1.2, Updated in 1.1.7) ---
 ''' <summary>
-''' Schedules event actions from the MyEvents module to be raised later. 
+''' Schedules event actions from the <see cref="MyEvents"/> module to be raised later. 
 ''' Useful for game frameworks (MonoGame, FNA, etc.) where you want to avoid raising events 
 ''' during the update phase.
 ''' </summary>
@@ -247,7 +278,7 @@ Public Module MyEventsEventScheduler
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions defined in this module.
+    ''' Raises all scheduled event actions defined in the <see cref="MyEvents"/> module.
     ''' </summary>
     ''' <remarks>
     ''' All scheduled events are raised in priority order (higher priority first),
