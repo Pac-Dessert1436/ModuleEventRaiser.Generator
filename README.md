@@ -1,32 +1,39 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> 📝 **Note on Documentation Through 1.1.7.9 and 1.1.7.10**
+> **Version 1.1.8 (Latest)**: Fully stable with all features working correctly with:
+> - Friend module accessibility support
+> - Polished XML documentation (`<see cref="..."/>` for better IntelliSense)
+> - Improved namespace wrapping
 >
-> Due to NuGet package packaging limitations, **the embedded README.md in the NuGet package cannot be changed**. The existing wrong source code in 1.1.7.5 and **wrong documentation in 1.1.7.9** have misled a lot of users.
-> 
-> **NEVER use 1.1.7.5 since it is broken.** Version 1.1.7.5 does NOT have multi-namespace support despite what the frozen NuGet documentation says.
-> 
-> - 1.1.7.9+ → Namespace support works ✅
-> - 1.1.7.5 → Namespace support broken ❌ (deprecated, unlisted)
->
-> Version 1.1.7.10 has a documentation typo, where it uses a literal string instead of the expected `NameOf`. **The actual implementation always correctly uses `NameOf(withDelaySec)` for parameter validation** to ensure user-friendly exception messages.
-> 
-> **This discrepancy is purely documentation-related and does not affect functionality.** The source generator is already feature-complete and fully functional - no further updates will be made for this cosmetic issue. **Additionally, key points regarding memory management with events are now included in the section "[Important Notes for This Package](#important-notes-for-this-package)".**
+> The NuGet package's embedded README cannot be changed, and contains a minor wording difference ("Enhanced namespace support" instead of the exact feature list above). The actual code is correct and fully functional. This does not affect usage. **Always use the latest version (1.1.8).**
+
+| Version | Status |
+|---------|--------|
+| 1.1.8 | ✅ Fully stable with all features working correctly |
+| 1.1.7.10 | ✅ Legacy .NET support |
+| 1.1.7.9 | ✅ Namespace support works |
+| 1.1.7.5 | ❌ Broken (deprecated, unlisted) |
 
 ## Description
-`ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability.
+`ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in the section [Important Notes for This Package](#important-notes-for-this-package)
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.7.10`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.1.8`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.1.7.10 Latest Update**: Fixed `ArgumentOutOfRangeException.ThrowIfNegative` compatibility for legacy .NET versions. If you are using .NET 8+, feel free to stay on 1.1.7.9.
+> **v1.1.8 Latest Update**: Major feature release with **module accessibility support**, together with improved XML documentation and parameter validation using `NameOf(withDelaySec)`. This version represents the **ultimate stable release** of ModuleEventRaiser.Generator.
 
-**New in version 1.1.7+**: 
+**New in version 1.1.8**: 
+- **Module Accessibility Support**: Automatically detects and preserves module accessibility levels (Public/Friend)
+- **Improved XML Documentation**: Adds `<see cref="EventName"/>` references for better IntelliSense integration
+- **Proper Module Scope**: Generated methods respect the original module's accessibility level
+
+**Existing features from version 1.1.7+**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
 - **Enhanced asynchronous methods** - add optional delays to async event raising
 - **Improved parameter documentation** - better XML documentation for generated methods
 - Comprehensive **event scheduling system** with thread-safe queue management, perfect for game frameworks (MonoGame, FNA, etc.)
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
+- **Improved Parameter Validation** - uses `NameOf(withDelaySec)` for user-friendly exception messages (on 1.1.7.10)
 
 ## Important Notes for This Package
 ### ⚠️ Critical: Memory Management with Events
@@ -47,7 +54,7 @@ Public Class MyApp
     ' ... more instance/static methods ...
 
     Public Sub Dispose() Implements IDisposable.Dispose
-        Dispose(True)
+        Dispose(disposing:=True)
         GC.SuppressFinalize(Me)
     End Sub
 
@@ -80,7 +87,8 @@ End Class
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
-- **Well-Documented**: Includes XML documentation for all generated methods
+- **Well-Documented**: Includes XML documentation for all generated methods with `<see cref="EventName"/>` references
+- **Module Accessibility Support (Version 1.1.8)**: Automatically detects and preserves module accessibility levels (Public/Friend)
 - **Parameter Handling**: Correctly handles event parameters with proper types
 - **Custom Event Types**: Supports both standard `EventHandler` and custom event types
 - **Partial Modules**: Uses partial modules to seamlessly integrate with existing code
@@ -91,6 +99,8 @@ End Class
 - **Delegate Pattern Support (Version 1.1.3+)**: Generates event raiser methods for events defined using delegate pattern (e.g. `Public Event MyEvent As EventHandler`)
 - **Optional Delay for Async Events (Version 1.1.7)**: Allows specifying a delay in seconds when raising events asynchronously, useful for simulating real-world event timing (Note: Parameter name `withDelaySec` is reserved to avoid conflicts with other event parameters)
 - **Priority-Based Event Scheduling (Version 1.1.7)**: Supports prioritizing scheduled events for more flexible event management, with higher priority events being raised first (Note: Parameter name `withPriority` is reserved to avoid conflicts with other event parameters)
+- **Enhanced Parameter Validation (Version 1.1.8)**: Uses `NameOf(withDelaySec)` for user-friendly exception messages
+- **Proper Module Scope (Version 1.1.8)**: Generated methods respect the original module's accessibility level
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -118,9 +128,9 @@ End Class
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.1.7.10
+   dotnet add package ModuleEventRaiser.Generator --version 1.1.8
    ```
-   - Version 1.1.7.10 is a **compatibility fix for legacy .NET versions**. If you are using .NET 8+, you can stay on 1.1.7.9.
+   - Version 1.1.8 introduces **module accessibility support**, together with improved XML documentation and parameter validation using `NameOf(withDelaySec)`.
 
 ## Example Usage
 

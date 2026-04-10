@@ -13,6 +13,7 @@ Public NotInheritable Class EventRaiserGen
         Public Property Events As List(Of EventInfo)
         Public Property RequiredNamespaces As List(Of String)
         Public Property ContainingNamespace As String
+        Public Property IsPublicModule As Boolean
     End Class
 
     Private Class EventInfo
@@ -34,6 +35,8 @@ Public NotInheritable Class EventRaiserGen
     End Class
 
     Public Sub Initialize(context As IGIC) Implements IIncrementalGenerator.Initialize
+        Dim moduleAccessLevel As Accessibility
+
         ' Create a pipeline for VB.NET syntax nodes
         Dim syntaxProvider = context.SyntaxProvider.CreateSyntaxProvider(
             Function(syntaxNode, token)
@@ -55,6 +58,8 @@ Public NotInheritable Class EventRaiserGen
                 Dim moduleBlock = eventDecl.FirstAncestorOrSelf(Of ModuleBlockSyntax)()
                 Dim moduleStatement = moduleBlock?.BlockStatement
 
+                ' NEW in 1.1.8: Check accessibility level for each module
+                moduleAccessLevel = gsc.SemanticModel.GetDeclaredSymbol(moduleStatement).DeclaredAccessibility
                 ' Return nothing if not in a module (should be filtered out by predicate)
                 If moduleStatement Is Nothing Then Return Nothing
 
@@ -137,7 +142,7 @@ Public NotInheritable Class EventRaiserGen
                                Dim eventsInModule = group.ToList()
 
                                ' Merge all namespaces from all events in this module
-                               Dim allNamespaces = New HashSet(Of String)()
+                               Dim allNamespaces As New HashSet(Of String)
                                For Each evt In eventsInModule
                                    If evt.RequiredNamespaces IsNot Nothing Then
                                        allNamespaces.UnionWith(evt.RequiredNamespaces)
@@ -155,7 +160,8 @@ Public NotInheritable Class EventRaiserGen
                                     .ModuleName = moduleName,
                                     .Events = eventsInModule,
                                     .RequiredNamespaces = allNamespaces.ToList(),
-                                    .ContainingNamespace = containingNamespace
+                                    .ContainingNamespace = containingNamespace,
+                                    .IsPublicModule = moduleAccessLevel = Accessibility.Public
                                 }
                            End Function).ToList()
                    End Function)
@@ -321,8 +327,9 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine()
         End If
 
-        ' Begin module
-        code.AppendLine($"Partial Public Module {modInfo.ModuleName}")
+        ' Begin module with proper module accessibility
+        Dim accessModifier = If(modInfo.IsPublicModule, "Public", "Friend")
+        code.AppendLine($"Partial {accessModifier} Module {modInfo.ModuleName}")
         code.AppendLine()
         ' Generate raise methods for each event in this module
         For Each evtInfo As EventInfo In modInfo.Events
@@ -354,7 +361,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 
             ' Generate the raise method
             code.AppendLine($"    ''' <summary>")
-            code.AppendLine($"    ''' Raises the {evtInfo.EventName} event (direct invocation).")
+            code.AppendLine($"    ''' Raises the <see cref=""{evtInfo.EventName}""/> event (direct invocation).")
             code.AppendLine($"    ''' </summary>")
             ' Add parameter documentation
             For Each pInfo As ParameterInfo In evtInfo.Parameters
@@ -367,7 +374,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 
             ' Generate async raise method (same as sync raise method)
             code.AppendLine($"    ''' <summary>")
-            code.AppendLine($"    ''' Asynchronously raises the {evtInfo.EventName} event. Use this method only in desktop apps, networking, etc.")
+            code.AppendLine($"    ''' Asynchronously raises the <see cref=""{evtInfo.EventName}""/> event. Use this method only in desktop apps, networking, etc.")
             code.AppendLine($"    ''' DO NOT USE THIS METHOD WHEN WRITING GAME LOGIC IN GAME FRAMEWORKS (MonoGame, FNA, etc.).")
             code.AppendLine($"    ''' </summary>")
             For Each pInfo As ParameterInfo In evtInfo.Parameters
@@ -387,7 +394,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
 
             ' New in version 1.1.0+: Add "ScheduleEvent_xxx" methods for each event
             code.AppendLine($"    ''' <summary>")
-            code.AppendLine($"    ''' Schedules the {evtInfo.EventName} event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).")
+            code.AppendLine($"    ''' Schedules the <see cref=""{evtInfo.EventName}""/> event to be raised later. Useful for game frameworks (MonoGame, FNA, etc.).")
             code.AppendLine($"    ''' </summary>")
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
@@ -405,7 +412,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         ' New in version 1.1.0+: Event scheduler module with comprehensive documentation
         code.AppendLine($"
 ''' <summary>
-''' Schedules event actions from the {modInfo.ModuleName} module to be raised later. 
+''' Schedules event actions from the <see cref=""{modInfo.ModuleName}""/> module to be raised later. 
 ''' Useful for game frameworks (MonoGame, FNA, etc.) where you want to avoid raising events 
 ''' during the update phase.
 ''' </summary>
@@ -435,8 +442,8 @@ Public Module {modInfo.ModuleName}EventScheduler
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions defined in this module. Events within the same
-    ''' priority level are raised in first-in-first-out (FIFO) order.
+    ''' Raises all scheduled event actions defined in the <see cref=""{modInfo.ModuleName}""/> module. 
+    ''' Events within the same priority level are raised in first-in-first-out (FIFO) order.
     ''' </summary>
     ''' <remarks>
     ''' This method is thread-safe and should be called during a phase where event handling 
