@@ -1,7 +1,7 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
 > **Version 1.2.0 (Latest)**: Minor breaking change with unified event scheduler and enhanced features:
-> - _**Unified ModuleEventScheduler**: Single shared scheduler class across all modules (breaking change)_
+> - _**Unified Event Scheduler**: Single shared scheduler class across all modules (breaking change)_
 > - **Event Accessibility Support**: Individual events now respect their declared accessibility (Public, Friend or Private)
 > - **Enhanced XML Documentation**: Comprehensive documentation with usage examples
 > - **Improved namespace wrapping** with module accessibility support (Public/Friend)
@@ -15,17 +15,17 @@
 | 1.1.7.5 | ❌ Broken (deprecated, unlisted) |
 
 ## Description
-`ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in the section [Important Notes on this Package](#important-notes-on-this-package)
+`ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on this Package](#important-notes-on-this-package)
 
 Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.0`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.2.0 Latest Update**: Major breaking change with **unified event scheduler** and **event accessibility support**. This version introduces a single shared `ModuleEventScheduler` class across all modules, replacing the previous per-module scheduler approach. Individual events now respect their declared accessibility levels (Public, Friend or Private).
+> **v1.2.0 Latest Update**: Breaking change with **unified event scheduler** and **event accessibility support**. This version introduces a single shared `ModuleEventScheduler` class across all modules, replacing the previous per-module scheduler approach. Individual events now respect their declared accessibility levels (Public, Friend or Private).
 
 **New in version 1.2.0**: 
-- **Unified ModuleEventScheduler**: Single shared scheduler class across all modules (breaking change from per-module schedulers)
+- **Unified `ModuleEventScheduler`**: Single shared scheduler class across all modules (breaking change from per-module schedulers)
 - **Event Accessibility Support**: Individual events now respect their declared accessibility (Public/Friend)
 - **Enhanced XML Documentation**: Comprehensive documentation with usage examples for all generated members
-- **EventScheduler Property**: Each module now has an `EventScheduler` property providing access to the unified scheduler
+- **`EventScheduler` Property**: Each module now has an `EventScheduler` property providing access to the unified scheduler
 
 **Breaking Change in version 1.2.0**:
 - **Scheduler Access**: Previously, each module had its own `{ModuleName}EventScheduler` module. Now, all modules share a single `ModuleEventScheduler` class, accessed via the `EventScheduler` property on each module.
@@ -311,7 +311,10 @@ Partial Public Module MyEvents
 
     ' ... More delegate pattern event raising methods ...
 End Module
+```
 
+### New in 1.2.0: Unified event scheduler class in `ModuleEventScheduler.vb`
+```vb
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
 ''' </summary>
@@ -332,13 +335,19 @@ End Module
 ''' <para>
 ''' <b>Usage Example:</b>
 ''' <code lang="vb">
-''' ' Schedule an event with default priority
-''' EventScheduler.ScheduleEventAction(Sub() RaiseEvent MyEvent(arg1, arg2))
-'''
-''' ' Schedule a high-priority event
-''' EventScheduler.ScheduleEventAction(Sub() RaiseEvent CriticalEvent(data), priorityValue:=10)
-'''
-''' ' Later, typically in the Draw phase:
+''' ' Schedule an event with default priority, using a wrapped RaiseEvent method
+''' EventScheduler.ScheduleEventAction(
+'''     Sub() 
+'''         Debug.WriteLine($""[ModuleEventScheduler] MyEvent raised with args: {{arg1}}, {{arg2}}"")
+'''         RaiseEvent_MyEvent(arg1, arg2)
+'''     End Sub)
+''' ' Schedule a high-priority event with similar logic
+''' EventScheduler.ScheduleEventAction(
+'''     Sub() 
+'''         Debug.WriteLine($""[ModuleEventScheduler] CriticalEvent raised with data: {{data}}"")
+'''         RaiseEvent_CriticalEvent(data)
+'''     End Sub, priorityValue:=10)
+''' ' Later, typically in the `Draw` phase within the game framework:
 ''' EventScheduler.RaiseScheduledEvents()
 ''' </code>
 ''' </para>
@@ -347,6 +356,11 @@ Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
         Public [Event] As Action
         Public Priority As Integer
+
+        Public Sub New([event] As Action, priority As Integer)
+            Me.Event = [event]
+            Me.Priority = priority
+        End Sub
     End Structure
 
     Private ReadOnly _pendingEvents As New Queue(Of EventItem)
