@@ -1,9 +1,9 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.1.8 Latest Update**: Enhanced namespace support with proper namespace wrapping and module accessibility detection. Ultimate enterprise-grade code generation quality achieved!
+> **v1.2.0 Latest Update**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
-**Existing features in version 1.1.7+**: 
+**Existing features in versions 1.1.x**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
 - **Enhanced asynchronous methods** - add optional delays to async event raising
 - **Improved parameter documentation** - better XML documentation for generated methods
@@ -11,123 +11,128 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 - **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
 - **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
 - **Namespace support** - properly wraps events in namespaces, preventing naming conflicts
-- **`Option Infer Off` compatibility** - fully compatible with `Option Infer Off` for strict coding standards
+- **Option Infer Off compatibility** - fully compatible with `Option Infer Off` for strict coding standards
 - **Legacy .NET support** - compatible with legacy .NET version such as .NET 6.0 and .NET 7.0, by replacing `ArgumentOutOfRangeException.ThrowIfNegative` with a traditional if-check.
 
-## 📦 Version Notes: 1.1.7.9+ → 1.1.8
+## 📦 Version Notes: 1.1.x → 1.2.0
 
-### 🎯 Module Accessibility Detection Enhancement
+### ⚠️ BREAKING CHANGE: Unified Event Scheduler Architecture
 
-Version 1.1.8 delivers a targeted improvement to module accessibility detection, building on the solid namespace foundation established in version 1.1.7.9+.
+Version 1.2.0 introduces a **major architectural improvement** to the event scheduling system. This is a breaking change that requires code updates when upgrading from previous versions.
 
-### 🔧 Key Improvement in 1.1.8
+### 🎯 What Changed?
 
-#### Module Accessibility Detection
-- **Public/Friend module support**: Automatic detection of module accessibility levels using semantic analysis
-- **Proper code generation**: Generated methods respect the module's original accessibility (Public/Friend)
-- **Enterprise compliance**: Better handling of internal and public module scenarios in complex projects
-- **Semantic analysis**: Module accessibility detection is based on `gsc.SemanticModel.GetDeclaredSymbol(moduleStatement).DeclaredAccessibility`
+#### Before (1.1.x and earlier):
+Each module had its own separate event scheduler module:
+```vb
+' Separate scheduler module for each event module
+Public Module MyEventsEventScheduler
+    Public Sub ScheduleEventAction(...)
+    Public Sub RaiseScheduledEvents()
+    Public ReadOnly Property PendingEventCount As Integer
+    Public Sub ClearScheduledEvents()
+End Module
 
-### 🛠️ Technical Change
+' Usage
+MyEventsEventScheduler.RaiseScheduledEvents()
+MyEventsEventScheduler.PendingEventCount
+```
 
-| Feature | 1.1.7.9 | 1.1.7.10 | 1.1.8 |
-|---------|---------|----------|-------|
-| Legacy .NET support | ❌ No  | ✅ Yes | ✅ **Yes** |
-| **Module accessibility detection** | ❌ No | ❌ No | ✅ **Yes** |
-| Namespace support | ✅ Excellent | ✅ Excellent | ✅ **Excellent** |
-| Option Infer Off compatibility | ✅ Enterprise | ✅ Enterprise | ✅ **Enterprise** |
-| Code generation quality | ✅ Excellent | ✅ Excellent | ✅ **Enhanced** |
+#### After (1.2.0):
+A unified `ModuleEventScheduler` class is generated globally, and each module gets an `EventScheduler` property:
+```vb
+' Unified scheduler class (generated once globally)
+Public NotInheritable Class ModuleEventScheduler
+    Public Sub ScheduleEventAction(...)
+    Public Sub RaiseScheduledEvents()
+    Public ReadOnly Property PendingEventCount As Integer
+    Public Sub ClearScheduledEvents()
+End Class
 
-### 🎯 Who Should Upgrade to 1.1.8?
+' Each module gets an EventScheduler property
+Partial Public Module MyEvents
+    Public ReadOnly Property EventScheduler As New ModuleEventScheduler
+End Module
+
+' Usage
+MyEvents.EventScheduler.RaiseScheduledEvents()
+MyEvents.EventScheduler.PendingEventCount
+```
+
+### 🔄 Migration Guide
+
+#### Step 1: Update scheduler method calls
+Replace all references to `{ModuleName}EventScheduler` with `{ModuleName}.EventScheduler`:
+
+| Old Code (1.1.x) | New Code (1.2.0) |
+|------------------|------------------|
+| `MyEventsEventScheduler.RaiseScheduledEvents()` | `MyEvents.EventScheduler.RaiseScheduledEvents()` |
+| `GameEventsEventScheduler.RaiseScheduledEvents()` | `GameEvents.EventScheduler.RaiseScheduledEvents()` |
+| `MyEventsEventScheduler.PendingEventCount` | `MyEvents.EventScheduler.PendingEventCount` |
+| `MyEventsEventScheduler.ClearScheduledEvents()` | `MyEvents.EventScheduler.ClearScheduledEvents()` |
+
+#### Step 2: Update scheduler property access
+If you have any code that references the scheduler modules directly:
+```vb
+' Old code (1.1.x)
+MyEventsEventScheduler.RaiseScheduledEvents()
+
+' New code (1.2.0, with a dot notation)
+MyEvents.EventScheduler.RaiseScheduledEvents()
+```
+
+#### Step 3: No changes needed for ScheduleEvent_xxx methods
+The `ScheduleEvent_xxx` methods in each module remain unchanged:
+```vb
+' This still works the same way
+MyEvents.ScheduleEvent_TemperatureChanged(25.5, withPriority:=10)
+```
+
+### ✅ Benefits of the New Architecture
+
+1. **Better Encapsulation**: Each module owns its scheduler instance through a property
+2. **Cleaner Code Generation**: Single `ModuleEventScheduler` class instead of multiple scheduler modules
+3. **Consistent API**: All scheduler functionality accessed through the module's `EventScheduler` property
+4. **Same Functionality**: All features (priority scheduling, thread safety, etc.) work exactly the same
+5. **Better IntelliSense**: Property-based access provides better IDE integration
+
+### 🛠️ Technical Changes
+
+| Feature | 1.1.x | 1.2.0 |
+|---------|-------|-------|
+| Scheduler Architecture | Per-module scheduler modules | Unified `ModuleEventScheduler` class |
+| Access Pattern | `MyEventsEventScheduler.Method()` | `MyEvents.EventScheduler.Method()` |
+| Code Generation | Multiple scheduler modules | Single scheduler class + module properties |
+| Functionality | ✅ Full | ✅ **Full (same)** |
+| Thread Safety | ✅ Yes | ✅ **Yes (same)** |
+| Priority Support | ✅ Yes | ✅ **Yes (same)** |
+| Module Accessibility Detection | ✅ Yes | ✅ **Yes (same)** |
+| Namespace Support | ✅ Excellent | ✅ **Excellent (same)** |
+| Option Infer Off Compatibility | ✅ Enterprise | ✅ **Enterprise (same)** |
+
+### 🎯 Who Should Upgrade to 1.2.0?
 
 #### 🚀 **Must Upgrade**
-- **Library authors**: Need proper accessibility handling for Public/Friend module distribution
-- **Enterprise projects**: With mixed accessibility module scenarios
-- **Complex codebases**: Require accurate module accessibility detection
+- **All users**: This is the latest stable version with architectural improvements
+- **New projects**: Start with the cleaner, more maintainable architecture
+- **Library authors**: Provide users with the best possible API design
 
-#### ✅ **Recommended Upgrade**
-- **All users**: Better module accessibility handling
-- **Future-proofing**: Enhanced compatibility with accessibility requirements
+#### ✅ **Upgrade Required (Breaking Change)**
+- **Existing projects**: Must update scheduler method calls (see Migration Guide above)
+- **Code using scheduler modules**: Replace `{ModuleName}EventScheduler` with `{ModuleName}.EventScheduler`
 
-## 📦 Version Notes: 1.1.5 → 1.1.7.9
+#### 💡 **Upgrade Effort**
+- **Low effort**: Simple find-and-replace for scheduler method calls
+- **High value**: Cleaner architecture, better encapsulation, future-proof design
 
-### 🎉 Ultimate Enterprise-Ready Release!
+### 📊 Migration Checklist
 
-Version 1.1.7.9 represents the pinnacle of ModuleEventRaiser.Generator's evolution, delivering **ultimate enterprise-grade compatibility** with explicit typing for `Option Infer Off` projects, plus comprehensive namespace support.
-
-### 🔥 Key Enterprise Features in 1.1.7.9
-
-#### 1. Option Infer Off Compatibility (Enterprise Critical)
-- **Explicit typing**: All generated code uses explicit type declarations
-- **Healthcare/Financial ready**: Perfect for regulated industries with strict coding standards
-- **Zero type inference**: No reliance on `Option Infer On` - works in all VB.NET environments
-- **Enterprise compliance**: Meets corporate coding standards requiring explicit typing
-
-#### 2. Multi-Namespace Support (Ultimate Feature)
-- **Namespace isolation**: Define event modules in different namespaces without conflicts
-- **Proper imports**: Automatic namespace handling for generated code
-- **Enterprise-ready**: Perfect for large projects with organized namespace structure
-- **Flexible architecture**: Support for complex project hierarchies
-
-#### 3. Priority-Based Event Scheduling
-- **Control event order**: Assign priority values to scheduled events
-- **Higher priority first**: Events with larger priority values are raised before lower ones
-- **Flexible syntax**: `ScheduleEvent_xxx(...parameters, Optional withPriority As Integer = 0)`
-
-#### 4. Enhanced Asynchronous Methods
-- **Optional delay support**: Add `withDelaySec` parameter to async methods
-- **Validation**: Automatic validation to ensure non-negative delay values
-- **Improved syntax**: `RaiseEventAsync_xxx(...parameters, Optional withDelaySec As Double = 0)`
-
-#### 5. Enterprise-Grade Code Quality
-- **Better XML docs**: Enhanced parameter descriptions and method documentation
-- **Clearer usage guidelines**: Improved comments for game framework compatibility
-- **Self-documenting code**: More descriptive generated code with explicit typing
-
-### 🛠️ Technical Evolution
-
-| Feature | 1.1.5 | 1.1.6 | 1.1.7.9 |
-|---------|-------|-------|---------|
-| Single Module Support | ✅ Excellent | ✅ Excellent | ✅ Excellent |
-| Multi-Module Support | ⚠️ Limited | ✅ Full | ✅ Full |
-| **Multi-Namespace Support** | ❌ No | ❌ No | ✅ **Ultimate** |
-| **Option Infer Off Compatibility** | ❌ No | ❌ No | ✅ **Enterprise** |
-| Priority Scheduling | ❌ No | ❌ No | ✅ Yes |
-| Async Delays | ❌ No | ❌ No | ✅ Yes |
-| Documentation Quality | Good | Good | Excellent |
-| **Enterprise Readiness** | Basic | Good | **Ultimate** |
-
-### 🎯 Who Should Upgrade to 1.1.7.9?
-
-#### 🚀 **Must Upgrade (Enterprise Critical)**
-- **Healthcare/Financial projects**: Require `Option Infer Off` compliance
-- **Regulated industries**: Need explicit typing for coding standards
-- **Enterprise developers**: Working with corporate coding standards
-- **Large project teams**: Need namespace isolation and type safety
-- **Library authors**: Want the most robust and enterprise-compatible version
-
-#### ✅ **Recommended Upgrade**
-- **Game developers**: Priority-based scheduling helps manage event order
-- **Async users**: Delay support adds flexibility to async event handling
-- **Documentation lovers**: Improved XML docs for better IntelliSense
-- **Future-proofing**: Planning for project growth and enterprise requirements
-
-#### 🤝 **Can Stay on Previous Versions**
-- **Simple projects**: Single module, single namespace usage with `Option Infer On`
-- **Stability-focused**: Current version works perfectly for your non-enterprise needs
-
-### 📊 Version Comparison Matrix
-
-| Feature | 1.1.5 | 1.1.6 | 1.1.7.9 |
-|---------|-------|-------|---------|
-| **Namespace Support** | Single | Single | **Multiple** |
-| **Option Infer Off** | ❌ No | ❌ No | ✅ **Enterprise** |
-| Module Conflicts | Possible | Resolved | **Eliminated** |
-| Priority Scheduling | ❌ No | ❌ No | ✅ Yes |
-| Async Delay Support | ❌ No | ❌ No | ✅ Yes |
-| Code Organization | Basic | Good | **Enterprise** |
-| Scalability | Limited | Good | **Ultimate** |
-| **Enterprise Compliance** | ❌ No | ❌ No | ✅ **Ultimate** |
+- [ ] Replace all `{ModuleName}EventScheduler.RaiseScheduledEvents()` with `{ModuleName}.EventScheduler.RaiseScheduledEvents()`
+- [ ] Replace all `{ModuleName}EventScheduler.PendingEventCount` with `{ModuleName}.EventScheduler.PendingEventCount`
+- [ ] Replace all `{ModuleName}EventScheduler.ClearScheduledEvents()` with `{ModuleName}.EventScheduler.ClearScheduledEvents()`
+- [ ] Update any direct references to scheduler modules
+- [ ] Test your event scheduling functionality after upgrade
+- [ ] Verify that all scheduled events are raised correctly
 
 ## Features
 - Automatically generate `RaiseEvent_xxx` methods for Module events
@@ -137,16 +142,16 @@ Version 1.1.7.9 represents the pinnacle of ModuleEventRaiser.Generator's evoluti
 - Clean and easy to use
 - Automatically adds required `Imports` for recognized types
 - `RaiseEventAsync_xxx` methods for asynchronous event raising (available in version 1.0.9+)
-- New in 1.1.2: `ScheduleEvent_xxx` methods for deferred event raising
-- New in 1.1.2: Thread-safe event scheduler with queue management, perfect for game frameworks (MonoGame, FNA, etc.)
-- New in 1.1.3: Delegate pattern detection that supports both traditional parameter lists and delegate-based events like `As EventHandler`
-- New in 1.1.6: **Multiple event module support** - fully qualified method calls for no ambiguity
-- New in 1.1.7: **Priority-based event scheduling** - control event order with priority values
-- New in 1.1.7: **Enhanced asynchronous methods** - optional delay support with validation
-- New in 1.1.7.9: **Multi-namespace support** - ultimate feature completeness for enterprise projects (NOT in 1.1.7.5)
-- New in 1.1.7.9: **`Option Infer Off` compatibility** - explicit typing for healthcare, financial, and regulated industries
-- New in 1.1.7.10: **Legacy .NET support** - `ArgumentOutOfRangeException.ThrowIfNegative` replaced with a traditional if-check.
-- **New in 1.1.8**: **Friend module support** - handle `Friend` modules with proper accessibility
+- **Event scheduling system** with queue management, perfect for game frameworks (MonoGame, FNA, etc.)
+- **Unified scheduler architecture** (NEW in 1.2.0) - each module has an `EventScheduler` property for cleaner encapsulation
+- **Priority-based event scheduling** - control event order with priority values (available in version 1.1.7+)
+- **Enhanced asynchronous methods** - optional delay support with validation (available in version 1.1.7+)
+- **Delegate pattern detection** that supports both traditional parameter lists and delegate-based events like `As EventHandler` (available in version 1.1.3+)
+- **Multiple event module support** - fully qualified method calls for no ambiguity (available in version 1.1.6+)
+- **Multi-namespace support** - ultimate feature completeness for enterprise projects (available in version 1.1.7.9+)
+- **`Option Infer Off` compatibility** - explicit typing for healthcare, financial, and regulated industries (available in version 1.1.7.9+)
+- **Legacy .NET support** - compatible with legacy .NET version such as .NET 6.0 and .NET 7.0 (available in version 1.1.7.10+)
+- **Module accessibility detection** - proper handling of Public/Friend modules (available in version 1.1.8+)
 
 ## Usage Example
 
@@ -254,43 +259,96 @@ Partial Public Module MyEvents
     End Sub
 End Module
 
-' --- Event scheduler module (NEW in version 1.1.2, Updated in 1.1.7) ---
+' --- Event scheduler property (NEW in version 1.2.0) ---
+' Each module now has an EventScheduler property that provides access to the unified ModuleEventScheduler
+' The ModuleEventScheduler class is generated once globally and shared across all modules
+Partial Public Module MyEvents
+    ''' <summary>
+    ''' Provides access to the unified event scheduler for this module.
+    ''' </summary>
+    ''' <value>A shared instance of <see cref="ModuleEventScheduler"/> for scheduling and raising events.</value>
+    ''' <remarks>
+    ''' This property provides a thread-safe mechanism to schedule events to be raised later,
+    ''' which is particularly useful in game development frameworks (MonoGame, FNA, Unity, etc.)
+    ''' where raising events during the update phase can cause performance issues.
+    ''' </remarks>
+    Public ReadOnly Property EventScheduler As New ModuleEventScheduler
+End Module
+```
+
+### Unified event scheduler class (NEW in version 1.2.0)
+```vb
 ''' <summary>
-''' Schedules event actions from the <see cref="MyEvents"/> module to be raised later. 
-''' Useful for game frameworks (MonoGame, FNA, etc.) where you want to avoid raising events 
-''' during the update phase.
+''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
 ''' </summary>
-Public Module MyEventsEventScheduler
-    Private ReadOnly _pendingEvents As New Queue(Of ([event] As Action, priority As Integer))
+''' <remarks>
+''' <para>
+''' This class is particularly useful in game development frameworks (MonoGame, FNA, Unity, etc.) 
+''' where raising events during the update phase can cause performance issues or race conditions.
+''' By scheduling events to be raised later (typically during the draw phase), you can maintain
+''' consistent frame rates and ensure thread-safe event handling.
+''' </para>
+''' <para>
+''' <b>Priority System:</b> Events can be scheduled with different priority values. Higher priority
+''' events are raised first. Events with the same priority are raised in first-in-first-out (FIFO) order.
+''' </para>
+''' <para>
+''' <b>Thread Safety:</b> All methods in this class are thread-safe and can be called from any thread.
+''' </para>
+''' </remarks>
+Public NotInheritable Class ModuleEventScheduler
+    Private Structure EventItem
+        Public [Event] As Action
+        Public Priority As Integer
+    End Structure
+
+    Private ReadOnly _pendingEvents As New Queue(Of EventItem)
     Private ReadOnly _lock As New Object
 
     ''' <summary>
-    ''' Schedules an event action to be raised later.
+    ''' Schedules an event action to be raised later with an optional priority value.
     ''' </summary>
-    ''' <param name="eventAction">The event action to schedule.</param>
+    ''' <param name="eventAction">The event action to schedule. This is typically a lambda that raises an event.</param>
     ''' <param name="priorityValue">The priority value of the event (default is 0).
-    ''' Events with higher priority values are raised first.</param>
+    ''' Events with higher priority values are raised first. Events with the same priority are raised in FIFO order.</param>
+    ''' <exception cref="ArgumentNullException">Thrown when <paramref name="eventAction"/> is null.</exception>
+    ''' <remarks>
+    ''' This method is thread-safe and can be called from any thread. The scheduled event will be
+    ''' raised when <see cref="RaiseScheduledEvents"/> is called.
+    ''' </remarks>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
-        ArgumentNullException.ThrowIfNull(eventAction)  ' Fixed in 1.1.7.4
+        ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
-            _pendingEvents.Enqueue((eventAction, priorityValue))
+            _pendingEvents.Enqueue(New EventItem(eventAction, priorityValue))
         End SyncLock
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions defined in the <see cref="MyEvents"/> module.
+    ''' Raises all scheduled event actions in priority order.
     ''' </summary>
     ''' <remarks>
-    ''' All scheduled events are raised in priority order (higher priority first),
-    ''' and FIFO order within the same priority level.
+    ''' <para>
+    ''' This method is thread-safe and should be called during a phase where event handling is safe,
+    ''' such as during the 'Draw' phase in game frameworks.
+    ''' </para>
+    ''' <para>
+    ''' Events are raised in the following order:
+    ''' <list type="number">
+    ''' <item><description>Events with higher priority values are raised first</description></item>
+    ''' <item><description>Events within the same priority level are raised in FIFO order</description></item>
+    ''' </list>
+    ''' </para>
+    ''' <para>
+    ''' After raising all events, the pending events queue is cleared. This method can be called
+    ''' multiple times; each call will raise all events that were scheduled since the last call.
+    ''' </para>
     ''' </remarks>
     Public Sub RaiseScheduledEvents()
-        ' Key fix in 1.1.7.9: Add explicit typing in case of `Option Infer Off`
         Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
-            actionsToRaise = Aggregate e In _pendingEvents Order By e.priority Descending
-                                 Select e.event Into ToArray()
+            actionsToRaise = Aggregate e In _pendingEvents Order By e.Priority Descending
+                                 Select e.Event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
 
@@ -299,8 +357,13 @@ Public Module MyEventsEventScheduler
     End Sub
 
     ''' <summary>
-    ''' Gets the number of pending events scheduled to be raised.
+    ''' Gets the number of pending events currently scheduled to be raised.
     ''' </summary>
+    ''' <value>The number of pending events.</value>
+    ''' <remarks>
+    ''' This property is thread-safe and can be called from any thread. It can be useful for
+    ''' debugging or for implementing logic that depends on the number of pending events.
+    ''' </remarks>
     Public ReadOnly Property PendingEventCount As Integer
         Get
             SyncLock _lock
@@ -312,17 +375,22 @@ Public Module MyEventsEventScheduler
     ''' <summary>
     ''' Clears all scheduled events without raising them.
     ''' </summary>
+    ''' <remarks>
+    ''' This method is thread-safe and can be called from any thread. Use this method when you
+    ''' need to cancel all pending events, such as during scene transitions or when resetting
+    ''' game state. After calling this method, <see cref="PendingEventCount"/> will be zero.
+    ''' </remarks>
     Public Sub ClearScheduledEvents()
         SyncLock _lock
             _pendingEvents.Clear()
         End SyncLock
     End Sub
-End Module
+End Class
 ```
 
-## Event Scheduling Usage (New in 1.1.2, Enhanced in 1.1.7)
+## Event Scheduling Usage (Updated in 1.2.0)
 
-The event scheduling system is queue-based, particularly useful for game frameworks where you need to avoid raising events during critical phases like the update loop. Version 1.1.7 adds priority-based scheduling for more control over event order.
+The event scheduling system is queue-based, particularly useful for game frameworks where you need to avoid raising events during critical phases like the update loop. Version 1.2.0 introduces a unified scheduler architecture with each module having its own `EventScheduler` property.
 
 ### Basic Scheduling Usage
 ```vb
@@ -330,10 +398,10 @@ The event scheduling system is queue-based, particularly useful for game framewo
 MyEvents.ScheduleEvent_TemperatureChanged(25.5)
 
 ' Raise all scheduled events at an appropriate time (e.g., during Draw phase)
-MyEventsEventScheduler.RaiseScheduledEvents()
+MyEvents.EventScheduler.RaiseScheduledEvents()
 ```
 
-### Priority-Based Scheduling (NEW in 1.1.7)
+### Priority-Based Scheduling
 ```vb
 ' Schedule events with different priorities
 MyEvents.ScheduleEvent_PlayerDied(playerId, withPriority:=10) ' High priority
@@ -344,7 +412,7 @@ MyEvents.ScheduleEvent_ParticleEffect(x, y, withPriority:=1)     ' Low priority
 ' 1. PlayerDied (priority 10)
 ' 2. ScoreUpdated (priority 5)
 ' 3. ParticleEffect (priority 1)
-MyEventsEventScheduler.RaiseScheduledEvents()
+MyEvents.EventScheduler.RaiseScheduledEvents()
 ```
 
 ### Game Framework Example (MonoGame/FNA)
@@ -371,14 +439,14 @@ Public Class Game1
     Protected Overrides Sub Draw(gameTime As GameTime)
         ' During draw phase, safely raise all scheduled events
         ' Events will be processed in priority order
-        MyEventsEventScheduler.RaiseScheduledEvents()
+        MyEvents.EventScheduler.RaiseScheduledEvents()
         
         MyBase.Draw(gameTime)
     End Sub
 End Class
 ```
 
-### Enhanced Async Methods (NEW in 1.1.7)
+### Enhanced Async Methods
 ```vb
 ' Async event with delay
 Await MyEvents.RaiseEventAsync_TemperatureChanged(25.5, withDelaySec:=2.0)
@@ -390,20 +458,39 @@ Await MyEvents.RaiseEventAsync_HumidityChanged(65.0)
 ### Advanced Scheduler Features
 ```vb
 ' Check how many events are pending
-Dim pendingCount = MyEventsEventScheduler.PendingEventCount
+Dim pendingCount = MyEvents.EventScheduler.PendingEventCount
 
 ' Clear all scheduled events without raising them (useful for scene transitions)
-MyEventsEventScheduler.ClearScheduledEvents()
+MyEvents.EventScheduler.ClearScheduledEvents()
+```
+
+### Multi-Module Scheduler Usage (Updated in 1.2.0)
+Each module has its own `EventScheduler` property, allowing independent event scheduling:
+
+```vb
+' Schedule events in different modules
+GameEvents.ScheduleEvent_PlayerDied(playerId, withPriority:=10)
+UIEvents.ScheduleEvent_ButtonClicked(buttonName, withPriority:=5)
+AudioEvents.ScheduleEvent_SoundPlayed(soundId, withPriority:=3)
+
+' Raise events from each module independently
+GameEvents.EventScheduler.RaiseScheduledEvents()
+UIEvents.EventScheduler.RaiseScheduledEvents()
+AudioEvents.EventScheduler.RaiseScheduledEvents()
+
+' Or check pending events for each module
+Dim gameEventsPending = GameEvents.EventScheduler.PendingEventCount
+Dim uiEventsPending = UIEvents.EventScheduler.PendingEventCount
 ```
 
 ## Installation
 Install via NuGet Package Manager:
-```
+```powershell
 Install-Package ModuleEventRaiser.Generator
 ```
 
 Or via .NET CLI:
-```
+```bash
 dotnet add package ModuleEventRaiser.Generator
 ```
 
