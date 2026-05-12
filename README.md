@@ -5,6 +5,7 @@
 > - **Event Accessibility Support**: Individual events now respect their declared accessibility (Public, Friend or Private)
 > - **Enhanced XML Documentation**: Comprehensive documentation with usage examples
 > - **Improved namespace wrapping** with module accessibility support (Public/Friend)
+> - **Note on Namespace Isolation**: When assemblies do not share a common root namespace, each assembly gets its own independent `ModuleEventScheduler` class. _No need to worry about namespace conflicts when working with multiple assemblies._ See [Important Notes on this Package → Other Notes](#other-notes) for more details.
 
 | Version | Status |
 |---------|--------|
@@ -89,6 +90,7 @@ End Class
 - **For version 1.1.7+**: The following parameter names are reserved and should not be used when defining module events:
   - `withPriority`: Used for priority-based event scheduling
   - `withDelaySec`: Used for optional delay in async event raising
+- **For version 1.2.0+**: The generated `ModuleEventScheduler` class is scoped to the current assembly's root namespace. Assemblies referencing each other do not share a single global instance. Each assembly gets its own independent `ModuleEventScheduler` class.
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
