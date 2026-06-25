@@ -1,6 +1,6 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> **Version 1.2.0 (Latest)**: Minor breaking change with unified event scheduler and enhanced features:
+> **Version 1.2.1 (Latest)**: Minor breaking change with unified event scheduler and enhanced features:
 > - _**Unified Event Scheduler**: Single shared scheduler class across all modules (breaking change)_
 > - **Event Accessibility Support**: Individual events now respect their declared accessibility (Public, Friend or Private)
 > - **Enhanced XML Documentation**: Comprehensive documentation with usage examples
@@ -9,7 +9,8 @@
 
 | Version | Status |
 |---------|--------|
-| 1.2.0 | ✅ Latest with unified scheduler and event accessibility |
+| 1.2.1 | ✅ Latest with unified scheduler and event accessibility |
+| 1.2.0 | ✅ Unified scheduler and event accessibility |
 | 1.1.8 | ✅ Fully functional with per-module schedulers |
 | 1.1.7.10 | ✅ Legacy .NET support with traditional if-check |
 | 1.1.7.9 | ✅ Namespace support works |
@@ -18,9 +19,11 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on this Package](#important-notes-on-this-package)
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.0`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.1`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.2.0 Latest Update**: Breaking change with **unified event scheduler** and **event accessibility support**. This version introduces a single shared `ModuleEventScheduler` class across all modules, replacing the previous per-module scheduler approach. Individual events now respect their declared accessibility levels (Public, Friend or Private).
+> **v1.2.1 Latest Update**: Cosmetic improvements to the generated `ModuleEventScheduler` code — explicit `Imports` statements and `ReadOnly` structure fields for better immutability.
+>
+> **v1.2.0**: Breaking change with **unified event scheduler** and **event accessibility support**. This version introduces a single shared `ModuleEventScheduler` class across all modules, replacing the previous per-module scheduler approach. Individual events now respect their declared accessibility levels (Public, Friend or Private).
 
 **New in version 1.2.0**: 
 - **Unified `ModuleEventScheduler`**: Single shared scheduler class across all modules (breaking change from per-module schedulers)
@@ -137,9 +140,9 @@ End Class
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.2.0
+   dotnet add package ModuleEventRaiser.Generator --version 1.2.1
    ```
-   - Version 1.2.0 introduces **unified event scheduler** and **event accessibility support**, with enhanced XML documentation and comprehensive usage examples.
+   - Version 1.2.1 introduces cosmetic improvements to the generated `ModuleEventScheduler` code. Version 1.2.0 introduced **unified event scheduler** and **event accessibility support**, with enhanced XML documentation and comprehensive usage examples.
 
 ## Example Usage
 
@@ -317,6 +320,12 @@ End Module
 
 ### New in 1.2.0: Unified event scheduler class in `ModuleEventScheduler.vb`
 ```vb
+Option Explicit On
+Option Strict On
+
+Imports System
+Imports System.Collections.Generic
+
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
 ''' </summary>
@@ -356,8 +365,8 @@ End Module
 ''' </remarks>
 Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
-        Public [Event] As Action
-        Public Priority As Integer
+        Public ReadOnly [Event] As Action
+        Public ReadOnly Priority As Integer
 
         Public Sub New([event] As Action, priority As Integer)
             Me.Event = [event]
