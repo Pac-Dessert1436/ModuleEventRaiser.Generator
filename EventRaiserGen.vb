@@ -183,6 +183,8 @@ Public NotInheritable Class EventRaiserGen
 
 Option Explicit On
 Option Strict On
+Imports System
+Imports System.Collections.Generic
 
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
@@ -223,8 +225,8 @@ Option Strict On
 ''' </remarks>
 Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
-        Public [Event] As Action
-        Public Priority As Integer
+        Public ReadOnly [Event] As Action
+        Public ReadOnly Priority As Integer
 
         Public Sub New([event] As Action, priority As Integer)
             Me.Event = [event]
@@ -465,7 +467,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         Dim namespaces = modInfo.RequiredNamespaces
         ' Add collected namespaces (sorted for consistency)
         If namespaces IsNot Nothing AndAlso namespaces.Count > 0 Then
-            For Each ns As String In namespaces.OrderBy(Function(x) x)
+            For Each ns As String In From x In namespaces Order By x
                 code.AppendLine($"Imports {ns}")
             Next ns
         End If
@@ -560,7 +562,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    ''' <param name=""withDelaySec"">The delay in seconds before raising the event. Default is 0.</param>")
             code.AppendLine($"    ''' <returns>A task representing the asynchronous operation.</returns>")
             code.AppendLine($"    ''' <remarks>")
-            code.AppendLine($"    ''' For game logic execution in game frameworks (MonoGame, FNA, etc.), use the 'ScheduleEvent_{evtInfo.EventName}' method instead.")
+            code.AppendLine($"    ''' For game logic execution in game frameworks (MonoGame, FNA, etc.), use the <see cref=""ScheduleEvent_{evtInfo.EventName}""/> method instead.")
             code.AppendLine($"    ''' </remarks>")
             code.AppendLine($"    {evtInfo.Accessibility} Async Function RaiseEventAsync_{evtInfo.EventName}({params}{comma}Optional withDelaySec As Double = 0) As Task")
             code.AppendLine($"        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), ""Delay seconds must be non-negative."")")

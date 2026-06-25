@@ -1,7 +1,9 @@
 # ModuleEventRaiser.Generator
 A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.2.0 Latest Update**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
+> **v1.2.1 Latest Update**: Cosmetic improvements to the generated `ModuleEventScheduler` code — explicit `Imports` statements and `ReadOnly` structure fields for better immutability.
+>
+> **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
 **Existing features in versions 1.1.x**: 
 - **Priority-based event scheduling** - control the order events are raised with priority values
@@ -14,7 +16,7 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 - **Option Infer Off compatibility** - fully compatible with `Option Infer Off` for strict coding standards
 - **Legacy .NET support** - compatible with legacy .NET version such as .NET 6.0 and .NET 7.0, by replacing `ArgumentOutOfRangeException.ThrowIfNegative` with a traditional if-check.
 
-## 📦 Version Notes: 1.1.x → 1.2.0
+## 📦 Version Notes: 1.1.x → 1.2.x
 
 ### ⚠️ BREAKING CHANGE: Unified Event Scheduler Architecture
 
@@ -38,8 +40,8 @@ MyEventsEventScheduler.RaiseScheduledEvents()
 MyEventsEventScheduler.PendingEventCount
 ```
 
-#### After (1.2.0):
-A unified `ModuleEventScheduler` class is generated globally, and each module gets an `EventScheduler` property:
+#### After (1.2.0 or later):
+A unified `ModuleEventScheduler` class is generated globally to the current assembly, and each module gets an `EventScheduler` property:
 ```vb
 ' Unified scheduler class (generated once globally)
 Public NotInheritable Class ModuleEventScheduler
@@ -278,6 +280,11 @@ End Module
 
 ### Unified event scheduler class (NEW in version 1.2.0)
 ```vb
+Option Explicit On
+Option Strict On
+Imports System
+Imports System.Collections.Generic
+
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
 ''' </summary>
@@ -298,8 +305,13 @@ End Module
 ''' </remarks>
 Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
-        Public [Event] As Action
-        Public Priority As Integer
+        Public ReadOnly [Event] As Action
+        Public ReadOnly Priority As Integer
+
+        Public Sub New([event] As Action, priority As Integer)
+            Me.Event = [event]
+            Me.Priority = priority
+        End Sub
     End Structure
 
     Private ReadOnly _pendingEvents As New Queue(Of EventItem)
@@ -351,7 +363,6 @@ Public NotInheritable Class ModuleEventScheduler
                                  Select e.Event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
-
         ' Raise all events outside the lock to avoid deadlocks
         Array.ForEach(actionsToRaise, Sub(atn) atn.Invoke())
     End Sub
