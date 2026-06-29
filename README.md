@@ -1,16 +1,13 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> **Version 1.2.1 (Latest)**: Minor breaking change with unified event scheduler and enhanced features:
-> - _**Unified Event Scheduler**: Single shared scheduler class across all modules (breaking change)_
-> - **Event Accessibility Support**: Individual events now respect their declared accessibility (Public, Friend or Private)
-> - **Enhanced XML Documentation**: Comprehensive documentation with usage examples
-> - **Improved namespace wrapping** with module accessibility support (Public/Friend)
-> - **Note on Namespace Isolation**: When assemblies do not share a common root namespace, each assembly gets its own independent `ModuleEventScheduler` class. _No need to worry about namespace conflicts when working with multiple assemblies._ See [Important Notes on this Package → Other Notes](#other-notes) for more details.
+> **Version 1.2.2 (Latest)**: Experimental weak event support with `WeakMulticastEvent` class! Prevent memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns.
+> 
+> **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
 | Version | Status |
 |---------|--------|
-| 1.2.1 | ✅ Latest with unified scheduler and event accessibility |
-| 1.2.0 | ✅ Unified scheduler and event accessibility |
+| 1.2.2 | ✅ Latest with experimental weak event support |
+| 1.2.0 and 1.2.1 | ✅ Unified scheduler and event accessibility (breaking change) |
 | 1.1.8 | ✅ Fully functional with per-module schedulers |
 | 1.1.7.10 | ✅ Legacy .NET support with traditional if-check |
 | 1.1.7.9 | ✅ Namespace support works |
@@ -19,9 +16,11 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on this Package](#important-notes-on-this-package)
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.1`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.2`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.2.1 Latest Update**: Cosmetic improvements to the generated `ModuleEventScheduler` code — explicit `Imports` statements and `ReadOnly` structure fields for better immutability.
+> **v1.2.2 Latest Update**: Experimental weak event support with `WeakMulticastEvent` class! Prevent memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns.
+> 
+> **v1.2.1**: Cosmetic improvements to the generated `ModuleEventScheduler` code — explicit `Imports` statements and `ReadOnly` structure fields for better immutability.
 >
 > **v1.2.0**: Breaking change with **unified event scheduler** and **event accessibility support**. This version introduces a single shared `ModuleEventScheduler` class across all modules, replacing the previous per-module scheduler approach. Individual events now respect their declared accessibility levels (Public, Friend or Private).
 
@@ -113,6 +112,7 @@ End Class
 - **Priority-Based Event Scheduling (Version 1.1.7)**: Supports prioritizing scheduled events for more flexible event management, with higher priority events being raised first (Note: Parameter name `withPriority` is reserved to avoid conflicts with other event parameters)
 - **Enhanced Parameter Validation (Version 1.1.8)**: Uses `NameOf(withDelaySec)` for user-friendly exception messages
 - **Proper Module Scope (Version 1.1.8)**: Generated methods respect the original module's accessibility level
+- **Weak Event Support (Experimental Version 1.2.2)**: `WeakMulticastEvent` class prevents memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -140,9 +140,9 @@ End Class
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.2.1
+   dotnet add package ModuleEventRaiser.Generator --version 1.2.2
    ```
-   - Version 1.2.1 introduces cosmetic improvements to the generated `ModuleEventScheduler` code. Version 1.2.0 introduced **unified event scheduler** and **event accessibility support**, with enhanced XML documentation and comprehensive usage examples.
+   - Version 1.2.2 introduces experimental weak event support with `WeakMulticastEvent` class to prevent memory leaks in event-driven architectures.
 
 ## Example Usage
 
