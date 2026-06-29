@@ -1,159 +1,91 @@
 # ModuleEventRaiser.Generator
-A lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in Modules. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+A powerful yet lightweight VB.NET source generator that automatically creates **RaiseEvent** helper methods for events declared in `Module`s. Despite its rich feature set, the generator maintains a tiny footprint with zero runtime dependencies and compile-time only code generation.
 
-> **v1.2.1 Latest Update**: Cosmetic improvements to the generated `ModuleEventScheduler` code — explicit `Imports` statements and `ReadOnly` structure fields for better immutability.
+The source generator is **enterprise-ready and fully compatible with `Option Infer Off`**, making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+
+> **v1.2.2 Latest Update**: Experimental weak event support with `WeakMulticastEvent` class! Prevent memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns.
 >
 > **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
-**Existing features in versions 1.1.x**: 
-- **Priority-based event scheduling** - control the order events are raised with priority values
-- **Enhanced asynchronous methods** - add optional delays to async event raising
-- **Improved parameter documentation** - better XML documentation for generated methods
-- Comprehensive **event scheduling system** with thread-safe queue management, perfect for game frameworks (MonoGame, FNA, etc.)
-- **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
-- **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
-- **Namespace support** - properly wraps events in namespaces, preventing naming conflicts
-- **Option Infer Off compatibility** - fully compatible with `Option Infer Off` for strict coding standards
-- **Legacy .NET support** - compatible with legacy .NET version such as .NET 6.0 and .NET 7.0, by replacing `ArgumentOutOfRangeException.ThrowIfNegative` with a traditional if-check.
+## 📦 Version Notes: 1.2.0 → 1.2.2
 
-## 📦 Version Notes: 1.1.x → 1.2.x
+### v1.2.2: Experimental Weak Event Support
 
-### ⚠️ BREAKING CHANGE: Unified Event Scheduler Architecture
+**New Feature**: Added `WeakMulticastEvent` class to prevent memory leaks in event-driven architectures!
 
-Version 1.2.0 introduces a **major architectural improvement** to the event scheduling system. This is a breaking change that requires code updates when upgrading from previous versions.
+#### Key Benefits:
+- **Memory Leak Prevention**: Weak references allow subscribers to be garbage collected even when publishers remain alive
+- **Full VB.NET Compatibility**: Works seamlessly with standard VB.NET event patterns using `Custom Event` syntax
+- **High Performance**: Uses strongly-typed invocation with compiled expression trees (avoids slow `DynamicInvoke`)
+- **Thread-Safe**: All operations are fully thread-safe for multi-threaded scenarios
+- **Automatic Cleanup**: Automatically removes dead handlers from the collection
 
-### 🎯 What Changed?
-
-#### Before (1.1.x and earlier):
-Each module had its own separate event scheduler module:
+#### Usage Example:
 ```vb
-' Separate scheduler module for each event module
-Public Module MyEventsEventScheduler
-    Public Sub ScheduleEventAction(...)
-    Public Sub RaiseScheduledEvents()
-    Public ReadOnly Property PendingEventCount As Integer
-    Public Sub ClearScheduledEvents()
-End Module
+' Declare a weak multicast event field in a module
+Private _myEvent As New WeakMulticastEvent(Of Action(Of Integer))
 
-' Usage
-MyEventsEventScheduler.RaiseScheduledEvents()
-MyEventsEventScheduler.PendingEventCount
+' Expose as standard VB.NET event in the module using `Custom Event` syntax
+Public Custom Event MyEvent As Action(Of Integer)
+    AddHandler(value As Action(Of Integer))
+        _myEvent.AddHandler(value)
+    End AddHandler
+    RemoveHandler(value As Action(Of Integer))
+        _myEvent.RemoveHandler(value)
+    End RemoveHandler
+    RaiseEvent(obj As Integer)
+        _myEvent.RaiseEvent(obj)
+    End RaiseEvent
+End Event
 ```
+The generator will automatically create `RaiseEvent_xxx`, `RaiseEventAsync_xxx` and `ScheduleEvent_xxx` methods for the above module event.
 
-#### After (1.2.0 or later):
-A unified `ModuleEventScheduler` class is generated globally to the current assembly, and each module gets an `EventScheduler` property:
-```vb
-' Unified scheduler class (generated once globally)
-Public NotInheritable Class ModuleEventScheduler
-    Public Sub ScheduleEventAction(...)
-    Public Sub RaiseScheduledEvents()
-    Public ReadOnly Property PendingEventCount As Integer
-    Public Sub ClearScheduledEvents()
-End Class
+#### Technical Details:
+- **Namespace**: Automatically uses your project's root namespace (no explicit declaration needed)
+- **Generic Type**: `WeakMulticastEvent(Of TDelegate As Class)` supports any delegate type. _VB.NET does not directly support Delegate type constraints, so runtime type validation ensures only delegate types are accepted_
+- **Methods**: `AddHandler`, `RemoveHandler`, `RaiseEvent`, `Clear`, and `ActiveHandlerCount` property
+- **Performance**: Up to 10-100x faster than `DynamicInvoke` for event raising (benchmark-proven improvement)
 
-' Each module gets an EventScheduler property
-Partial Public Module MyEvents
-    Public ReadOnly Property EventScheduler As New ModuleEventScheduler
-End Module
+### v1.2.0: Unified Event Scheduler Architecture (Breaking Change)
 
-' Usage
-MyEvents.EventScheduler.RaiseScheduledEvents()
-MyEvents.EventScheduler.PendingEventCount
-```
+**Major Improvement**: Replaced per-module scheduler modules with a unified architecture
 
-### 🔄 Migration Guide
+#### What Changed?
+- **Before**: Separate scheduler modules like `MyEventsEventScheduler` for each event module
+- **After**: Single `ModuleEventScheduler` class + `EventScheduler` property on each module
+- **Access Pattern**: `MyEvents.EventScheduler.RaiseScheduledEvents()` instead of `MyEventsEventScheduler.RaiseScheduledEvents()`
 
-#### Step 1: Update scheduler method calls
-Replace all references to `{ModuleName}EventScheduler` with `{ModuleName}.EventScheduler`:
+#### Migration Guide:
+1. Replace all `{ModuleName}EventScheduler.Method()` calls with `{ModuleName}.EventScheduler.Method()`
+2. No changes needed for `ScheduleEvent_xxx` methods - they work exactly the same
+3. Example: `MyEventsEventScheduler.RaiseScheduledEvents()` → `MyEvents.EventScheduler.RaiseScheduledEvents()`
 
-| Old Code (1.1.x) | New Code (1.2.0) |
-|------------------|------------------|
-| `MyEventsEventScheduler.RaiseScheduledEvents()` | `MyEvents.EventScheduler.RaiseScheduledEvents()` |
-| `GameEventsEventScheduler.RaiseScheduledEvents()` | `GameEvents.EventScheduler.RaiseScheduledEvents()` |
-| `MyEventsEventScheduler.PendingEventCount` | `MyEvents.EventScheduler.PendingEventCount` |
-| `MyEventsEventScheduler.ClearScheduledEvents()` | `MyEvents.EventScheduler.ClearScheduledEvents()` |
+#### Benefits:
+- Better encapsulation with module-owned scheduler instances
+- Cleaner code generation (single scheduler class instead of multiple modules)
+- Improved IntelliSense through property-based access
+- Same powerful functionality (priority scheduling, thread safety, etc.)
 
-#### Step 2: Update scheduler property access
-If you have any code that references the scheduler modules directly:
-```vb
-' Old code (1.1.x)
-MyEventsEventScheduler.RaiseScheduledEvents()
+## Key Features
+- **Automatic Event Raiser Generation**: Creates `RaiseEvent_xxx` methods for all events in your modules
+- **Universal Parameter Support**: Works with any event parameter types (primitives, strings, custom classes, etc.)
+- **Zero Runtime Overhead**: Compile-time only code generation with no runtime dependencies
+- **Asynchronous Event Support**: `RaiseEventAsync_xxx` methods for non-blocking event raising (v1.0.9+)
+- **Smart Import Management**: Automatically adds required `Imports` statements for recognized types
+- **Clean, Intuitive API**: Easy-to-use methods that follow VB.NET best practices
 
-' New code (1.2.0, with a dot notation)
-MyEvents.EventScheduler.RaiseScheduledEvents()
-```
-
-#### Step 3: No changes needed for ScheduleEvent_xxx methods
-The `ScheduleEvent_xxx` methods in each module remain unchanged:
-```vb
-' This still works the same way
-MyEvents.ScheduleEvent_TemperatureChanged(25.5, withPriority:=10)
-```
-
-### ✅ Benefits of the New Architecture
-
-1. **Better Encapsulation**: Each module owns its scheduler instance through a property
-2. **Cleaner Code Generation**: Single `ModuleEventScheduler` class instead of multiple scheduler modules
-3. **Consistent API**: All scheduler functionality accessed through the module's `EventScheduler` property
-4. **Same Functionality**: All features (priority scheduling, thread safety, etc.) work exactly the same
-5. **Better IntelliSense**: Property-based access provides better IDE integration
-
-### 🛠️ Technical Changes
-
-| Feature | 1.1.x | 1.2.0 |
-|---------|-------|-------|
-| Scheduler Architecture | Per-module scheduler modules | Unified `ModuleEventScheduler` class |
-| Access Pattern | `MyEventsEventScheduler.Method()` | `MyEvents.EventScheduler.Method()` |
-| Code Generation | Multiple scheduler modules | Single scheduler class + module properties |
-| Functionality | ✅ Full | ✅ **Full (same)** |
-| Thread Safety | ✅ Yes | ✅ **Yes (same)** |
-| Priority Support | ✅ Yes | ✅ **Yes (same)** |
-| Module Accessibility Detection | ✅ Yes | ✅ **Yes (same)** |
-| Namespace Support | ✅ Excellent | ✅ **Excellent (same)** |
-| Option Infer Off Compatibility | ✅ Enterprise | ✅ **Enterprise (same)** |
-
-### 🎯 Who Should Upgrade to 1.2.0?
-
-#### 🚀 **Must Upgrade**
-- **All users**: This is the latest stable version with architectural improvements
-- **New projects**: Start with the cleaner, more maintainable architecture
-- **Library authors**: Provide users with the best possible API design
-
-#### ✅ **Upgrade Required (Breaking Change)**
-- **Existing projects**: Must update scheduler method calls (see Migration Guide above)
-- **Code using scheduler modules**: Replace `{ModuleName}EventScheduler` with `{ModuleName}.EventScheduler`
-
-#### 💡 **Upgrade Effort**
-- **Low effort**: Simple find-and-replace for scheduler method calls
-- **High value**: Cleaner architecture, better encapsulation, future-proof design
-
-### 📊 Migration Checklist
-
-- [ ] Replace all `{ModuleName}EventScheduler.RaiseScheduledEvents()` with `{ModuleName}.EventScheduler.RaiseScheduledEvents()`
-- [ ] Replace all `{ModuleName}EventScheduler.PendingEventCount` with `{ModuleName}.EventScheduler.PendingEventCount`
-- [ ] Replace all `{ModuleName}EventScheduler.ClearScheduledEvents()` with `{ModuleName}.EventScheduler.ClearScheduledEvents()`
-- [ ] Update any direct references to scheduler modules
-- [ ] Test your event scheduling functionality after upgrade
-- [ ] Verify that all scheduled events are raised correctly
-
-## Features
-- Automatically generate `RaiseEvent_xxx` methods for Module events
-- Supports any event parameter types (Double, String, custom classes, etc.)
-- Zero runtime dependencies
-- Compile-time only code generation
-- Clean and easy to use
-- Automatically adds required `Imports` for recognized types
-- `RaiseEventAsync_xxx` methods for asynchronous event raising (available in version 1.0.9+)
-- **Event scheduling system** with queue management, perfect for game frameworks (MonoGame, FNA, etc.)
-- **Unified scheduler architecture** (NEW in 1.2.0) - each module has an `EventScheduler` property for cleaner encapsulation
-- **Priority-based event scheduling** - control event order with priority values (available in version 1.1.7+)
-- **Enhanced asynchronous methods** - optional delay support with validation (available in version 1.1.7+)
-- **Delegate pattern detection** that supports both traditional parameter lists and delegate-based events like `As EventHandler` (available in version 1.1.3+)
-- **Multiple event module support** - fully qualified method calls for no ambiguity (available in version 1.1.6+)
-- **Multi-namespace support** - ultimate feature completeness for enterprise projects (available in version 1.1.7.9+)
-- **`Option Infer Off` compatibility** - explicit typing for healthcare, financial, and regulated industries (available in version 1.1.7.9+)
-- **Legacy .NET support** - compatible with legacy .NET version such as .NET 6.0 and .NET 7.0 (available in version 1.1.7.10+)
-- **Module accessibility detection** - proper handling of Public/Friend modules (available in version 1.1.8+)
+### Advanced Features
+- **Priority-Based Event Scheduling**: Control event execution order with priority values (v1.1.7+)
+- **Enhanced Asynchronous Methods**: Optional delay support with validation for precise timing control (v1.1.7+)
+- **Unified Scheduler Architecture**: Each module gets an `EventScheduler` property for clean encapsulation (v1.2.0+)
+- **Weak Event Support**: `WeakMulticastEvent` class prevents memory leaks in event-driven architectures (EXPERIMENTAL v1.2.2+)
+- **Delegate Pattern Detection**: Supports both traditional parameter lists and delegate-based events like `As EventHandler` (v1.1.3+)
+- **Multi-Module Support**: Resolves ambiguity in method calls across multiple event modules (v1.1.6+)
+- **Enterprise-Grade Namespace Handling**: Perfectly supports multi-namespace projects for large-scale applications (v1.1.7.9+)
+- **Strict Coding Standards**: Fully compatible with `Option Infer Off` for regulated industries (v1.1.7.9+)
+- **Legacy .NET Compatibility**: Works seamlessly with .NET 6.0, .NET 7.0, and newer versions (v1.1.7.10+)
+- **Accessibility Awareness**: Properly handles Public/Friend module access levels (v1.1.8+)
+- **Polished Generated Code**: Clean, well-documented output with explicit `Imports` and immutable structure fields
 
 ## Usage Example
 
