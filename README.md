@@ -1,12 +1,13 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> **Version 1.2.2 (Latest)**: Experimental weak event support with `WeakMulticastEvent` class! Prevent memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns.
-> 
+> **Version 1.2.3 (Latest & Urgent Update)**: Quality & correctness improvements across `ModuleEventScheduler` and `WeakMulticastEvent`. Stable FIFO ordering within same priority, race-condition-safe weak references, state-free `ActiveHandlerCount` property, and **explicit `System.Linq` import**.
+>
 > **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
 | Version | Status |
 |---------|--------|
-| 1.2.2 | ✅ Latest with experimental weak event support |
+| 1.2.3 | ✅ Latest with stable FIFO ordering and race-condition-safe weak references |
+| 1.2.2 | ✅ Experimental weak event support |
 | 1.2.0 and 1.2.1 | ✅ Unified scheduler and event accessibility (breaking change) |
 | 1.1.8 | ✅ Fully functional with per-module schedulers |
 | 1.1.7.10 | ✅ Legacy .NET support with traditional if-check |
@@ -16,23 +17,22 @@
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on this Package](#important-notes-on-this-package)
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.2`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.3`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.2.2 Latest Update**: Experimental weak event support with `WeakMulticastEvent` class! Prevent memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns.
-> 
-> **v1.2.1**: Cosmetic improvements to the generated `ModuleEventScheduler` code — explicit `Imports` statements and `ReadOnly` structure fields for better immutability.
->
-> **v1.2.0**: Breaking change with **unified event scheduler** and **event accessibility support**. This version introduces a single shared `ModuleEventScheduler` class across all modules, replacing the previous per-module scheduler approach. Individual events now respect their declared accessibility levels (Public, Friend or Private).
-
-**New in version 1.2.0**: 
-- **Unified `ModuleEventScheduler`**: Single shared scheduler class across all modules (breaking change from per-module schedulers)
-- **Event Accessibility Support**: Individual events now respect their declared accessibility (Public/Friend)
-- **Enhanced XML Documentation**: Comprehensive documentation with usage examples for all generated members
-- **`EventScheduler` Property**: Each module now has an `EventScheduler` property providing access to the unified scheduler
-
-**Breaking Change in version 1.2.0**:
+**⚠️ Breaking Change in version 1.2.0**:
 - **Scheduler Access**: Previously, each module had its own `{ModuleName}EventScheduler` module. Now, all modules share a single `ModuleEventScheduler` class, accessed via the `EventScheduler` property on each module.
 - **Code Migration**: Replace `{ModuleName}EventScheduler.ScheduleEventAction(...)` with `{ModuleName}.EventScheduler.ScheduleEventAction(...)` (see [Migration Guide](#migration-guide-version-11x--120) at the bottom of the documentation)
+
+**New in version 1.2.3**:
+- **Stable FIFO ordering within same priority** - Events scheduled with equal priority values now reliably execute in the order they were added (previously relied on LINQ's unstable sort)
+- **`ModuleEventScheduler` data structure refinement** - Switched from `Queue(Of EventItem)` to `List(Of EventItem)` with a monotonic `Order` field for semantically correct priority-plus-order sorting
+- **Explicit `System.Linq` import** - The generated `ModuleEventScheduler` now explicitly imports the `System.Linq` namespace for consistent compilation across all project types
+- **Race-condition-safe weak references in `WeakMulticastEvent`** - Replaced the old non-generic `WeakReference` with `WeakReference(Of TDelegate)`, using `TryGetTarget()` instead of the broken `IsAlive` → `Target` pattern
+- **NullReferenceException fix in `WeakMulticastEvent.RemoveHandler`** - Now uses the `HandlerEntry` struct with `MethodInfo` + target tracking for reliable matching
+- **`ActiveHandlerCount` no longer mutates state** - Property getter previously called `RemoveAll()` inside the lock; now purely counts live handlers without side effects
+- **`RemoveDeadHandlers()` public method** - Explicit API for scavenging handlers whose targets have been garbage collected
+- **Null guard on `RemoveHandler(Nothing)`** - No longer throws unexpectedly when called with a null handler
+- **Better delegate matching** - The new `HandlerEntry` struct compares both `MethodInfo` and target object for accurate handler removal
 
 **Existing features from version 1.1.x**: 
 - **Module Accessibility Support**: Automatically detects and preserves module accessibility levels (Public/Friend)
@@ -93,6 +93,8 @@ End Class
   - `withPriority`: Used for priority-based event scheduling
   - `withDelaySec`: Used for optional delay in async event raising
 - **For version 1.2.0+**: The generated `ModuleEventScheduler` class is scoped to the current assembly's root namespace. Assemblies referencing each other do not share a single global instance. Each assembly gets its own independent `ModuleEventScheduler` class.
+- **For version 1.2.3+**: The generated `ModuleEventScheduler` now explicitly imports `System.Linq`. Starting with .NET SDK 7, VB.NET projects implicitly import common namespaces at the project level, so modern projects always have `System.Linq` available. However, some older VB.NET projects (or those with custom project-level imports) may not. The explicit import ensures consistent compilation across all project types.
+  - _There is no action required for most users - modern VB.NET projects implicitly import `System.Linq`._ If you are targeting a legacy framework or have removed `System.Linq` from your project-level imports, please upgrade to 1.2.3 immediately and reload your project, in order to pick up the regenerated source.
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
@@ -112,11 +114,14 @@ End Class
 - **Priority-Based Event Scheduling (Version 1.1.7)**: Supports prioritizing scheduled events for more flexible event management, with higher priority events being raised first (Note: Parameter name `withPriority` is reserved to avoid conflicts with other event parameters)
 - **Enhanced Parameter Validation (Version 1.1.8)**: Uses `NameOf(withDelaySec)` for user-friendly exception messages
 - **Proper Module Scope (Version 1.1.8)**: Generated methods respect the original module's accessibility level
-- **Weak Event Support (Experimental Version 1.2.2)**: `WeakMulticastEvent` class prevents memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns
+- **Weak Event Support (Version 1.2.2+)**: `WeakMulticastEvent` class prevents memory leaks in event-driven architectures while maintaining full compatibility with standard VB.NET event patterns
+- **Stable FIFO Ordering (Version 1.2.3)**: Events with the same priority are raised in insertion order - no more non-deterministic ordering
+- **Race-Condition-Safe Weak References (Version 1.2.3)**: Uses `WeakReference(Of T).TryGetTarget()` for reliable handler tracking, with `HandlerEntry` struct for accurate delegate matching
+- **Explicit `System.Linq` Import (Version 1.2.3)**: Generated `ModuleEventScheduler` now explicitly imports `System.Linq` for consistent compilation across all project types
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
-- [.NET SDK 6.0+](https://dotnet.microsoft.com/download/)
+- [.NET SDK 6.0+](https://dotnet.microsoft.com/download/) (but **.NET 10** is recommended)
 - VB.NET project targeting .NET Standard 2.0 or later
 
 ## Installation
@@ -140,9 +145,9 @@ End Class
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.2.2
+   dotnet add package ModuleEventRaiser.Generator --version 1.2.3
    ```
-   - Version 1.2.2 introduces experimental weak event support with `WeakMulticastEvent` class to prevent memory leaks in event-driven architectures.
+   - Version 1.2.3 introduces quality & correctness improvements: stable FIFO ordering, race-condition-safe weak references, and explicit `System.Linq` import in generated code.
 
 ## Example Usage
 
@@ -318,13 +323,14 @@ Partial Public Module MyEvents
 End Module
 ```
 
-### New in 1.2.0: Unified event scheduler class in `ModuleEventScheduler.vb`
+### New in 1.2.0: Unified event scheduler class in `ModuleEventScheduler.vb` (Updated in v1.2.3)
 ```vb
 Option Explicit On
 Option Strict On
 
 Imports System
 Imports System.Collections.Generic
+Imports System.Linq
 
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
@@ -367,15 +373,18 @@ Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
         Public ReadOnly [Event] As Action
         Public ReadOnly Priority As Integer
+        Public ReadOnly Order As Long
 
-        Public Sub New([event] As Action, priority As Integer)
+        Public Sub New([event] As Action, priority As Integer, order As Long)
             Me.Event = [event]
             Me.Priority = priority
+            Me.Order = order
         End Sub
     End Structure
 
-    Private ReadOnly _pendingEvents As New Queue(Of EventItem)
+    Private ReadOnly _pendingEvents As New List(Of EventItem)
     Private ReadOnly _lock As New Object
+    Private _nextOrder As Long
 
     ''' <summary>
     ''' Schedules an event action to be raised later with an optional priority value.
@@ -391,7 +400,8 @@ Public NotInheritable Class ModuleEventScheduler
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
         ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
-            _pendingEvents.Enqueue(New EventItem(eventAction, priorityValue))
+            _pendingEvents.Add(New EventItem(eventAction, priorityValue, _nextOrder))
+            _nextOrder += 1
         End SyncLock
     End Sub
 
@@ -419,11 +429,11 @@ Public NotInheritable Class ModuleEventScheduler
         Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
-            actionsToRaise = Aggregate e In _pendingEvents Order By e.Priority Descending
-                                 Select e.Event Into ToArray()
+            actionsToRaise = Aggregate evt As EventItem In _pendingEvents
+                             Order By evt.Priority Descending, evt.Order Ascending
+                             Select evt.Event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
-
         ' Raise all events outside the lock to avoid deadlocks
         Array.ForEach(actionsToRaise, Sub(atn) atn.Invoke())
     End Sub

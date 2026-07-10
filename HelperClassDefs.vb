@@ -9,6 +9,7 @@ Option Explicit On
 Option Strict On
 Imports System
 Imports System.Collections.Generic
+Imports System.Linq
 
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
@@ -31,14 +32,14 @@ Imports System.Collections.Generic
 ''' <b>Usage Example:</b>
 ''' <code lang=""vb"">
 ''' ' Schedule an event with default priority, using a wrapped RaiseEvent method
-''' EventScheduler.ScheduleEventAction(
+''' EventScheduler.ScheduleEvent(
 '''     Sub() 
 '''         Debug.WriteLine($""[ModuleEventScheduler] MyEvent raised with args: {{arg1}}, {{arg2}}"")
 '''         RaiseEvent_MyEvent(arg1, arg2)
 '''     End Sub)
 '''
 ''' ' Schedule a high-priority event with similar logic
-''' EventScheduler.ScheduleEventAction(
+''' EventScheduler.ScheduleEvent(
 '''     Sub() 
 '''         Debug.WriteLine($""[ModuleEventScheduler] CriticalEvent raised with data: {{data}}"")
 '''         RaiseEvent_CriticalEvent(data)
@@ -53,15 +54,18 @@ Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
         Public ReadOnly [Event] As Action
         Public ReadOnly Priority As Integer
+        Public ReadOnly Order As Long
 
-        Public Sub New([event] As Action, priority As Integer)
+        Public Sub New([event] As Action, priority As Integer, order As Long)
             Me.Event = [event]
             Me.Priority = priority
+            Me.Order = order
         End Sub
     End Structure
 
-    Private ReadOnly _pendingEvents As New Queue(Of EventItem)
+    Private ReadOnly _pendingEvents As New List(Of EventItem)
     Private ReadOnly _lock As New Object
+    Private _nextOrder As Long
 
     ''' <summary>
     ''' Schedules an event action to be raised later with an optional priority value.
@@ -77,7 +81,8 @@ Public NotInheritable Class ModuleEventScheduler
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
         ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
-            _pendingEvents.Enqueue(New EventItem(eventAction, priorityValue))
+            _pendingEvents.Add(New EventItem(eventAction, priorityValue, _nextOrder))
+            _nextOrder += 1
         End SyncLock
     End Sub
 
@@ -105,8 +110,9 @@ Public NotInheritable Class ModuleEventScheduler
         Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
-            actionsToRaise = Aggregate e In _pendingEvents Order By e.Priority Descending
-                                 Select e.Event Into ToArray()
+            actionsToRaise = Aggregate evt As EventItem In _pendingEvents
+                             Order By evt.Priority Descending, evt.Order Ascending
+                             Select evt.Event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
         ' Raise all events outside the lock to avoid deadlocks
@@ -154,6 +160,7 @@ Option Explicit On
 Option Strict On
 Imports System
 Imports System.Collections.Generic
+Imports System.Linq
 Imports System.Linq.Expressions
 
 ''' <summary>
@@ -196,7 +203,40 @@ Imports System.Linq.Expressions
 ''' </para>
 ''' </remarks>
 Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
-    Private ReadOnly _handlers As New List(Of WeakReference)
+    Private Structure HandlerEntry
+        Public ReadOnly WeakRef As WeakReference(Of TDelegate)
+        Public ReadOnly Method As System.Reflection.MethodInfo
+        Public ReadOnly Target As WeakReference
+
+        Public Sub New(handler As TDelegate)
+            Dim d As [Delegate] = CType(CObj(handler), [Delegate])
+            Me.WeakRef = New WeakReference(Of TDelegate)(handler)
+            Me.Method = d.Method
+            Me.Target = If(d.Target IsNot Nothing, New WeakReference(d.Target), Nothing)
+        End Sub
+
+        Public Function TryGetHandler(ByRef handler As TDelegate) As Boolean
+            Return WeakRef.TryGetTarget(handler)
+        End Function
+
+        Public Function Matches(handler As TDelegate) As Boolean
+            Dim d As [Delegate] = CType(CObj(handler), [Delegate])
+            If Not Me.Method.Equals(d.Method) Then Return False
+
+            ' 1. both have no target = match
+            ' 2. one has target, other doesn't = no match
+            If Me.Target Is Nothing AndAlso d.Target Is Nothing Then Return True
+            If Me.Target Is Nothing OrElse d.Target Is Nothing Then Return False
+
+            ' Compare targets - but our target reference may have been collected
+            Dim ourTarget As Object = Nothing
+            If Me.Target.IsAlive Then ourTarget = Me.Target.Target
+            If ourTarget Is Nothing Then Return False
+            Return ourTarget.Equals(d.Target)
+        End Function
+    End Structure
+
+    Private ReadOnly _handlers As New List(Of HandlerEntry)
     Private ReadOnly _lock As New Object
     Private Shared ReadOnly _invoker As Action(Of TDelegate, Object()) = CreateInvokeAction()
 
@@ -216,8 +256,8 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
             Throw New ArgumentException(""Event handler must be a delegate type."", NameOf(handler))
         End If
         SyncLock _lock
-            _handlers.RemoveAll(Function(wr) Not wr.IsAlive)
-            _handlers.Add(New WeakReference(handler))
+            RemoveDeadHandlersUnlocked()
+            _handlers.Add(New HandlerEntry(handler))
         End SyncLock
     End Sub
 
@@ -230,8 +270,15 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     ''' If the handler is not found, no action is taken.
     ''' </remarks>
     Public Sub [RemoveHandler](handler As TDelegate)
+        If handler Is Nothing Then Exit Sub
         SyncLock _lock
-            _handlers.RemoveAll(Function(wr) Not wr.IsAlive OrElse wr.Target.Equals(handler))
+            _handlers.RemoveAll(
+                Function(entry)
+                    Dim target As TDelegate = Nothing
+                    
+                    ' Remove if collected OR if it matches the handler being removed
+                    Return Not entry.TryGetHandler(target) OrElse entry.Matches(handler)
+                End Function)
         End SyncLock
     End Sub
 
@@ -254,16 +301,18 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
         SyncLock _lock
             ' Iterate backward to safely remove dead handlers without skipping elements
             For i As Integer = _handlers.Count - 1 To 0 Step -1
-                Dim wr = _handlers(i)
-                If wr.IsAlive Then
-                    liveHandlers.Add(CType(wr.Target, TDelegate))
+                Dim target As TDelegate = Nothing
+                If _handlers(i).TryGetHandler(target) Then
+                    liveHandlers.Add(target)
                 Else
                     _handlers.RemoveAt(i)
                 End If
             Next i
         End SyncLock
         ' Invoke all handlers outside the lock to avoid deadlocks
-        liveHandlers.ForEach(Sub(hdlr) _invoker(hdlr, args))
+        For Each hdlr In liveHandlers
+            _invoker(hdlr, args)
+        Next hdlr
     End Sub
 
     ''' <summary>
@@ -271,14 +320,18 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     ''' </summary>
     ''' <value>The number of active event handlers.</value>
     ''' <remarks>
-    ''' Removes dead handlers from the collection before returning the count to ensure
-    ''' an accurate representation of active handlers.
+    ''' This property is thread-safe and can be called from any thread. It counts only
+    ''' handlers whose targets are still reachable by the garbage collector.
     ''' </remarks>
     Public ReadOnly Property ActiveHandlerCount As Integer
         Get
             SyncLock _lock
-                _handlers.RemoveAll(Function(wr) Not wr.IsAlive)
-                Return _handlers.Count
+                Dim count As Integer = 0
+                For Each he In _handlers
+                    Dim target As TDelegate = Nothing
+                    If he.TryGetHandler(target) Then count += 1
+                Next he
+                Return count
             End SyncLock
         End Get
     End Property
@@ -297,17 +350,44 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     End Sub
 
     ''' <summary>
+    ''' Scavenges handlers whose targets have been garbage collected.
+    ''' </summary>
+    ''' <remarks>
+    ''' This method is thread-safe and can be called from any thread. It is useful for
+    ''' keeping the internal collection clean when handlers are not actively being added
+    ''' or removed.
+    ''' </remarks>
+    Public Sub RemoveDeadHandlers()
+        SyncLock _lock
+            RemoveDeadHandlersUnlocked()
+        End SyncLock
+    End Sub
+
+    ''' <summary>
+    ''' Removes dead handlers. Caller must hold <see cref=""_lock""/>.
+    ''' </summary>
+    Private Sub RemoveDeadHandlersUnlocked()
+        For i As Integer = _handlers.Count - 1 To 0 Step -1
+            Dim target As TDelegate = Nothing
+            If Not _handlers(i).TryGetHandler(target) Then
+                _handlers.RemoveAt(i)
+            End If
+        Next i
+    End Sub
+
+    ''' <summary>
     ''' Creates a strongly-typed invocation delegate for the specified delegate type.
     ''' </summary>
     ''' <returns>An action that invokes the delegate with the specified arguments.</returns>
     ''' <exception cref=""InvalidOperationException"">Thrown if the delegate type does not have an Invoke method.</exception>
     Private Shared Function CreateInvokeAction() As Action(Of TDelegate, Object())
-        Dim invokeMethod = GetType(TDelegate).GetMethod(""Invoke"")
+        Dim delegateType = GetType(TDelegate)
+        Dim invokeMethod = delegateType.GetMethod(""Invoke"")
         If invokeMethod Is Nothing Then Throw New InvalidOperationException(
-            $""Delegate type '{GetType(TDelegate).Name}' does not have an Invoke method."")
+            $""Delegate type '{delegateType.Name}' does not have an Invoke method."")
 
         ' Create expression tree for strongly-typed invocation
-        Dim delegateParam = Expression.Parameter(GetType(TDelegate), ""handler"")
+        Dim delegateParam = Expression.Parameter(delegateType, ""handler"")
         Dim argsParam = Expression.Parameter(GetType(Object()), ""args"")
 
         ' Convert arguments to match the delegate's parameter types
