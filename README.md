@@ -1,23 +1,13 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> **Version 1.2.3 (Latest & Urgent Update)**: Quality & correctness improvements across `ModuleEventScheduler` and `WeakMulticastEvent`. Stable FIFO ordering within same priority, race-condition-safe weak references, state-free `ActiveHandlerCount` property, and **explicit `System.Linq` import**.
+> **Version 1.2.4 (Latest & Urgent Update)**: Fixed a hidden bug discovered to this day in the source generator's `Friend Event` handling path. If your project uses `Friend Event` declarations, please upgrade to this version immediately to avoid compilation and visibility mismatches.
 >
 > **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
-
-| Version | Status |
-|---------|--------|
-| 1.2.3 | ✅ Latest with stable FIFO ordering and race-condition-safe weak references |
-| 1.2.2 | ✅ Experimental weak event support |
-| 1.2.0 and 1.2.1 | ✅ Unified scheduler and event accessibility (breaking change) |
-| 1.1.8 | ✅ Fully functional with per-module schedulers |
-| 1.1.7.10 | ✅ Legacy .NET support with traditional if-check |
-| 1.1.7.9 | ✅ Namespace support works |
-| 1.1.7.5 | ❌ Broken (deprecated, unlisted) |
 
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on this Package](#important-notes-on-this-package)
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.3`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.4`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
 **⚠️ Breaking Change in version 1.2.0**:
 - **Scheduler Access**: Previously, each module had its own `{ModuleName}EventScheduler` module. Now, all modules share a single `ModuleEventScheduler` class, accessed via the `EventScheduler` property on each module.
@@ -33,6 +23,9 @@ Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Ge
 - **`RemoveDeadHandlers()` public method** - Explicit API for scavenging handlers whose targets have been garbage collected
 - **Null guard on `RemoveHandler(Nothing)`** - No longer throws unexpectedly when called with a null handler
 - **Better delegate matching** - The new `HandlerEntry` struct compares both `MethodInfo` and target object for accurate handler removal
+
+**New in version 1.2.4**:
+- **Critical `Friend Event` handling bug fix** - Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations
 
 **Existing features from version 1.1.x**: 
 - **Module Accessibility Support**: Automatically detects and preserves module accessibility levels (Public/Friend)
@@ -118,6 +111,7 @@ End Class
 - **Stable FIFO Ordering (Version 1.2.3)**: Events with the same priority are raised in insertion order - no more non-deterministic ordering
 - **Race-Condition-Safe Weak References (Version 1.2.3)**: Uses `WeakReference(Of T).TryGetTarget()` for reliable handler tracking, with `HandlerEntry` struct for accurate delegate matching
 - **Explicit `System.Linq` Import (Version 1.2.3)**: Generated `ModuleEventScheduler` now explicitly imports `System.Linq` for consistent compilation across all project types
+- **Critical `Friend Event` Handling Fix (Version 1.2.4)**: Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations. _Prior versions of the source generator incorrectly uses `Internal` that doesn't exist in VB.NET._
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -145,9 +139,10 @@ End Class
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.2.3
+   dotnet add package ModuleEventRaiser.Generator --version 1.2.4
    ```
-   - Version 1.2.3 introduces quality & correctness improvements: stable FIFO ordering, race-condition-safe weak references, and explicit `System.Linq` import in generated code.
+   - Version 1.2.4 fixes a critical hidden bug in `Friend Event` handling path that could cause compilation and visibility mismatches
+   - Version 1.2.3 introduced quality & correctness improvements: stable FIFO ordering, race-condition-safe weak references, and explicit `System.Linq` import in generated code.
 
 ## Example Usage
 

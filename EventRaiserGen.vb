@@ -27,6 +27,13 @@ Public NotInheritable Class EventRaiserGen
         Public Property DelegateTypeName As String
         Public Property ContainingNamespace As String
         Public Property Accessibility As Accessibility
+
+        ' Fixed in 1.2.4: Generated methods for `Friend Event`s are no longer `Internal Sub`.
+        Public ReadOnly Property AccessibilityString As String
+            Get
+                Return If(Accessibility = Accessibility.Internal, "Friend", Accessibility.ToString())
+            End Get
+        End Property
     End Class
 
     Private Class ParameterInfo
@@ -59,7 +66,7 @@ Public NotInheritable Class EventRaiserGen
                 Dim moduleBlock = eventDecl.FirstAncestorOrSelf(Of ModuleBlockSyntax)()
                 Dim moduleStatement = moduleBlock?.BlockStatement
 
-                ' NEW in 1.1.8: Check accessibility level for each module
+                ' NEW in 1.1.8: Check accessibility level for each module (fixed in 1.2.4)
                 moduleAccessLevel = gsc.SemanticModel.GetDeclaredSymbol(moduleStatement).DeclaredAccessibility
                 ' Return nothing if not in a module (should be filtered out by predicate)
                 If moduleStatement Is Nothing Then Return Nothing
@@ -407,7 +414,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             For Each pInfo As ParameterInfo In evtInfo.Parameters
                 code.AppendLine($"    ''' <param name=""{pInfo.ParamName}"">{ParameterDescription(pInfo)}</param>")
             Next pInfo
-            code.AppendLine($"    {evtInfo.Accessibility} Sub RaiseEvent_{evtInfo.EventName}({params})")
+            code.AppendLine($"    {evtInfo.AccessibilityString} Sub RaiseEvent_{evtInfo.EventName}({params})")
             code.AppendLine($"        RaiseEvent {evtInfo.EventName}({args})")
             code.AppendLine($"    End Sub")
             code.AppendLine()
@@ -425,7 +432,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             code.AppendLine($"    ''' <remarks>")
             code.AppendLine($"    ''' For game logic execution in game frameworks (MonoGame, FNA, etc.), use the <see cref=""ScheduleEvent_{evtInfo.EventName}""/> method instead.")
             code.AppendLine($"    ''' </remarks>")
-            code.AppendLine($"    {evtInfo.Accessibility} Async Function RaiseEventAsync_{evtInfo.EventName}({params}{comma}Optional withDelaySec As Double = 0) As Task")
+            code.AppendLine($"    {evtInfo.AccessibilityString} Async Function RaiseEventAsync_{evtInfo.EventName}({params}{comma}Optional withDelaySec As Double = 0) As Task")
             code.AppendLine($"        If withDelaySec < 0 Then Throw New ArgumentOutOfRangeException(NameOf(withDelaySec), ""Delay seconds must be non-negative."")")
             code.AppendLine($"        If withDelaySec > 0 Then Await Task.Delay(TimeSpan.FromSeconds(withDelaySec))")
             code.AppendLine($"        Await Task.Run(Sub() RaiseEvent {evtInfo.EventName}({args}))")
@@ -441,7 +448,7 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
             Next pInfo
             code.AppendLine($"    ''' <param name=""withPriority"">The priority value to raise the event with (default is 0).")
             code.AppendLine($"    ''' Events with higher priority values are raised first.</param>")
-            code.AppendLine($"    {evtInfo.Accessibility} Sub ScheduleEvent_{evtInfo.EventName}({params}{comma}Optional withPriority As Integer = 0)")
+            code.AppendLine($"    {evtInfo.AccessibilityString} Sub ScheduleEvent_{evtInfo.EventName}({params}{comma}Optional withPriority As Integer = 0)")
             code.AppendLine($"        {modInfo.ModuleName}.EventScheduler.ScheduleEventAction(Sub() RaiseEvent {evtInfo.EventName}({args}), withPriority)")
             code.AppendLine($"    End Sub")
             code.AppendLine()
