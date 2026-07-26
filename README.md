@@ -3,11 +3,17 @@ A powerful yet lightweight VB.NET source generator that automatically creates **
 
 The source generator is **enterprise-ready and fully compatible with `Option Infer Off`**, making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
 
-> **v1.2.3 Urgent Update**: Quality & correctness improvements across `ModuleEventScheduler` and `WeakMulticastEvent`. Stable FIFO ordering within same priority, race-condition-safe weak references, state-free `ActiveHandlerCount` property, and **explicit `System.Linq` import**.
+> **v1.2.4 Urgent Update**: Fixed a hidden bug discovered to this day in the source generator's `Friend Event` handling path by preserving the intended `Friend` accessibility in generated event trigger methods.
 >
-> **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
+> **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality (see [Breaking Change in v1.2.0](#breaking-change-in-v120)).
 
-## 📦 Version Notes: 1.2.0 → 1.2.3
+## 📦 Version Notes: 1.2.3 → 1.2.4
+
+### v1.2.4: Critical Bug Fix on `Friend Event` Declaration
+
+This urgent update has fixed a hidden bug discovered to this day in the source generator's `Friend Event` handling path. Generated event trigger methods for `Friend Event`s in VB.NET modules were incorrectly emitted as `Internal Sub` or `Internal Async Function`, instead of preserving the intended `Friend` accessibility.
+
+The fix restores correct access-level semantics for `Friend Event` event trigger methods, ensuring the generator **now supports Public, Friend, and Private events consistently** in VB.NET modules. _If your project uses `Friend Event` declarations, upgrade to v1.2.4 immediately to avoid compilation and visibility mismatches._
 
 ### v1.2.3: Quality & Correctness Improvements
 
@@ -18,7 +24,7 @@ The source generator is **enterprise-ready and fully compatible with `Option Inf
 - **🔧 Internal data structure refinement** - Switched from `Queue(Of EventItem)` to `List(Of EventItem)` with a monotonic `Order` field for semantically correct priority-plus-order sorting
 - **📝 Explicit `System.Linq` import** - The generated `ModuleEventScheduler` now explicitly imports the `System.Linq` namespace. Starting with .NET SDK 7, VB.NET projects implicitly import common namespaces at the project level, so modern projects always have `System.Linq` available. _However, some older VB.NET projects (or those with custom project-level imports) may not. Adding the `System.Linq` import to generated source ensures consistent compilation across all project types._
 
-> **Note**: _**There is no action required for most users - modern VB.NET projects implicitly import `System.Linq`.**_ If you are targeting a legacy framework or have removed `System.Linq` from your project-level imports, please upgrade to 1.2.3 immediately and reload your project, in order to pick up the regenerated source.
+> **Note**: If you are targeting a legacy framework or have removed `System.Linq` from your project-level imports, please upgrade to 1.2.3 immediately and reload your project, in order to pick up the regenerated source.
 
 #### `WeakMulticastEvent` Improvements:
 - **🔐 Race-condition-safe weak references** - Replaced the old non-generic `WeakReference` with `WeakReference(Of TDelegate)`, using `TryGetTarget()` instead of the broken `IsAlive` → `Target` pattern (which had a time-of-check/time-of-use race condition with the GC)
@@ -28,44 +34,7 @@ The source generator is **enterprise-ready and fully compatible with `Option Inf
 - **Null guard on `RemoveHandler(Nothing)`** - No longer throws unexpectedly when called with a null handler
 - **Better delegate matching** - The new `HandlerEntry` struct compares both `MethodInfo` and target object for accurate handler removal
 
-### v1.2.2: Experimental Weak Event Support
-
-**New Feature**: Added `WeakMulticastEvent` class to prevent memory leaks in event-driven architectures!
-
-#### Key Benefits:
-- **Memory Leak Prevention**: Weak references allow subscribers to be garbage collected even when publishers remain alive
-- **Full VB.NET Compatibility**: Works seamlessly with standard VB.NET event patterns using `Custom Event` syntax
-- **High Performance**: Uses strongly-typed invocation with compiled expression trees (avoids slow `DynamicInvoke`)
-- **Thread-Safe**: All operations are fully thread-safe for multi-threaded scenarios
-- **Automatic Cleanup**: Automatically removes dead handlers from the collection
-
-#### Usage Example:
-```vb
-' Declare a weak multicast event field in a module
-Private _myEvent As New WeakMulticastEvent(Of Action(Of Integer))
-
-' Expose as standard VB.NET event in the module using `Custom Event` syntax
-Public Custom Event MyEvent As Action(Of Integer)
-    AddHandler(value As Action(Of Integer))
-        _myEvent.AddHandler(value)
-    End AddHandler
-    RemoveHandler(value As Action(Of Integer))
-        _myEvent.RemoveHandler(value)
-    End RemoveHandler
-    RaiseEvent(obj As Integer)
-        _myEvent.RaiseEvent(obj)
-    End RaiseEvent
-End Event
-```
-The generator will automatically create `RaiseEvent_xxx`, `RaiseEventAsync_xxx` and `ScheduleEvent_xxx` methods for the above module event.
-
-#### Technical Details:
-- **Namespace**: Automatically uses your project's root namespace (no explicit declaration needed)
-- **Generic Type**: `WeakMulticastEvent(Of TDelegate As Class)` supports any delegate type. _VB.NET does not directly support Delegate type constraints, so runtime type validation ensures only delegate types are accepted_
-- **Methods**: `AddHandler`, `RemoveHandler`, `RaiseEvent`, `Clear`, `RemoveDeadHandlers`, and `ActiveHandlerCount` property
-- **Performance**: Up to 10-100x faster than `DynamicInvoke` for event raising (benchmark-proven improvement)
-
-### v1.2.0: Unified Event Scheduler Architecture (Breaking Change)
+## Breaking Change in v1.2.0
 
 **Major Improvement**: Replaced per-module scheduler modules with a unified architecture
 
@@ -120,8 +89,7 @@ Partial Public Module MyEvents
 End Module
 ```
 
-### Multi-Namespace Support (NEW in 1.1.7.9)
-> **Important Note**: Version 1.1.7.5 does NOT support multiple namespaces as planned.
+### Multi-Namespace Support
 
 Define event modules in different namespaces for better organization. Note that the namespace declarations are naturally on top of the project's root namespace:
 
