@@ -48,6 +48,15 @@ End Class
 ```
 **Why this matters**: The package does NOT contain methods that automatically remove event handlers. NEITHER would the native `Handles` keyword in VB.NET automatically do so. *__Without proper cleanup, especially when the event publishers are long-lived in your VB.NET app, the memory leak will definitely take place.__*
 
+### Exception Handling in `RaiseScheduledEvents` Method (Available in v1.2.5)
+
+Starting with v1.2.5, the `RaiseScheduledEvents` method (in the `ModuleEventScheduler` class) supports optional exception handling. You can pass a logger callback to catch and log any exceptions thrown during event processing. The method will continue raising remaining events even if one of them fails, ensuring that a single faulty handler does not block the rest. Example usage:
+``` vb
+EventScheduler.RaiseScheduledEvents(
+    loggerAction:=Sub(ex As Exception) Debug.WriteLine($"Error raising event: {ex.Message}")
+)
+```
+
 ### Other Notes
 - The source generator only works with VB.NET modules and does not support classes or structures.
 - The generator includes `Imports System` by default in generated files.
