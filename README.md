@@ -1,42 +1,15 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> **Version 1.2.4 (Latest & Urgent Update)**: Fixed a hidden bug discovered to this day in the source generator's `Friend Event` handling path. If your project uses `Friend Event` declarations, please upgrade to this version immediately to avoid compilation and visibility mismatches.
+> **Version 1.2.5 (Latest)**: A reliability and performance release that adds missing namespace imports for guaranteed compilation on legacy projects and removes an unnecessary field from the scheduler.
 >
 > **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
 ## Description
-`ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on this Package](#important-notes-on-this-package)
+`ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on This Package](#important-notes-on-this-package).
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.4`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards.
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.5`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards. _For more information on prior versions of this package, see [Version History](#version-history) at the end of this documentation._
 
-**⚠️ Breaking Change in version 1.2.0**:
-- **Scheduler Access**: Previously, each module had its own `{ModuleName}EventScheduler` module. Now, all modules share a single `ModuleEventScheduler` class, accessed via the `EventScheduler` property on each module.
-- **Code Migration**: Replace `{ModuleName}EventScheduler.ScheduleEventAction(...)` with `{ModuleName}.EventScheduler.ScheduleEventAction(...)` (see [Migration Guide](#migration-guide-version-11x--120) at the bottom of the documentation)
-
-**New in version 1.2.3**:
-- **Stable FIFO ordering within same priority** - Events scheduled with equal priority values now reliably execute in the order they were added (previously relied on LINQ's unstable sort)
-- **`ModuleEventScheduler` data structure refinement** - Switched from `Queue(Of EventItem)` to `List(Of EventItem)` with a monotonic `Order` field for semantically correct priority-plus-order sorting
-- **Explicit `System.Linq` import** - The generated `ModuleEventScheduler` now explicitly imports the `System.Linq` namespace for consistent compilation across all project types
-- **Race-condition-safe weak references in `WeakMulticastEvent`** - Replaced the old non-generic `WeakReference` with `WeakReference(Of TDelegate)`, using `TryGetTarget()` instead of the broken `IsAlive` → `Target` pattern
-- **NullReferenceException fix in `WeakMulticastEvent.RemoveHandler`** - Now uses the `HandlerEntry` struct with `MethodInfo` + target tracking for reliable matching
-- **`ActiveHandlerCount` no longer mutates state** - Property getter previously called `RemoveAll()` inside the lock; now purely counts live handlers without side effects
-- **`RemoveDeadHandlers()` public method** - Explicit API for scavenging handlers whose targets have been garbage collected
-- **Null guard on `RemoveHandler(Nothing)`** - No longer throws unexpectedly when called with a null handler
-- **Better delegate matching** - The new `HandlerEntry` struct compares both `MethodInfo` and target object for accurate handler removal
-
-**New in version 1.2.4**:
-- **Critical `Friend Event` handling bug fix** - Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations
-
-**Existing features from version 1.1.x**: 
-- **Module Accessibility Support**: Automatically detects and preserves module accessibility levels (Public/Friend)
-- **Priority-based event scheduling** - control the order events are raised with priority values
-- **Enhanced asynchronous methods** - add optional delays to async event raising
-- **Improved parameter documentation** - better XML documentation for generated methods
-- **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
-- **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
-- **Improved Parameter Validation** - uses `NameOf(withDelaySec)` for user-friendly exception messages
-
-## Important Notes on this Package
+## Important Notes on This Package
 ### ⚠️ Critical: Memory Management with Events
 Events declared in VB.NET modules and raised via this package involve **standard .NET strong references**. When your event handlers subscribed in module events are linked to short-lived objects, keep in mind that **the event handlers MUST be always removed** the moment the short-lived objects are disposed:
 
@@ -86,8 +59,13 @@ End Class
   - `withPriority`: Used for priority-based event scheduling
   - `withDelaySec`: Used for optional delay in async event raising
 - **For version 1.2.0+**: The generated `ModuleEventScheduler` class is scoped to the current assembly's root namespace. Assemblies referencing each other do not share a single global instance. Each assembly gets its own independent `ModuleEventScheduler` class.
-- **For version 1.2.3+**: The generated `ModuleEventScheduler` now explicitly imports `System.Linq`. Starting with .NET SDK 7, VB.NET projects implicitly import common namespaces at the project level, so modern projects always have `System.Linq` available. However, some older VB.NET projects (or those with custom project-level imports) may not. The explicit import ensures consistent compilation across all project types.
-  - _There is no action required for most users - modern VB.NET projects implicitly import `System.Linq`._ If you are targeting a legacy framework or have removed `System.Linq` from your project-level imports, please upgrade to 1.2.3 immediately and reload your project, in order to pick up the regenerated source.
+- **For version 1.2.5+**: The generated code now explicitly imports `System.Threading.Tasks` in addition to `System.Linq` introduced in v1.2.3. If you are targeting a legacy .NET framework or have removed these namespaces from your project-level imports, upgrade to 1.2.5 and reload your project to regenerate the source. Alternatively, add the following to your `.vbproj` file:
+  ```xml
+  <ItemGroup>
+    <Import Include="System.Threading.Tasks" />
+    <Import Include="System.Linq" />
+  </ItemGroup>
+  ```
 
 ## Key Features
 - **Automatic Code Generation**: Generates event raiser methods for all events in VB.NET modules
@@ -111,7 +89,8 @@ End Class
 - **Stable FIFO Ordering (Version 1.2.3)**: Events with the same priority are raised in insertion order - no more non-deterministic ordering
 - **Race-Condition-Safe Weak References (Version 1.2.3)**: Uses `WeakReference(Of T).TryGetTarget()` for reliable handler tracking, with `HandlerEntry` struct for accurate delegate matching
 - **Explicit `System.Linq` Import (Version 1.2.3)**: Generated `ModuleEventScheduler` now explicitly imports `System.Linq` for consistent compilation across all project types
-- **Critical `Friend Event` Handling Fix (Version 1.2.4)**: Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations. _Prior versions of the source generator incorrectly uses `Internal` that doesn't exist in VB.NET._
+- **Critical `Friend Event` Handling Fix (Version 1.2.4)**: Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations. _Prior versions of the source generator incorrectly used `Internal` that doesn't exist in VB.NET._
+- **Reliable Builds & Efficient Scheduler (Version 1.2.5)**: Added missing namespace imports for guaranteed compilation on legacy projects and removed the unnecessary `_nextOrder` field from `ModuleEventScheduler` to reduce memory allocations.
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -139,10 +118,9 @@ End Class
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.2.4
+   dotnet add package ModuleEventRaiser.Generator --version 1.2.5
    ```
-   - Version 1.2.4 fixes a critical hidden bug in `Friend Event` handling path that could cause compilation and visibility mismatches
-   - Version 1.2.3 introduced quality & correctness improvements: stable FIFO ordering, race-condition-safe weak references, and explicit `System.Linq` import in generated code.
+   - Version 1.2.5 adds missing namespace imports for guaranteed compilation on legacy projects and removes the unnecessary `_nextOrder` field from the scheduler.
 
 ## Example Usage
 
@@ -689,6 +667,45 @@ You can use Find and Replace in Visual Studio to update your code:
 - Replace: `{ModuleName}.EventScheduler`
 
 Replace `{ModuleName}` with your actual module names (e.g., `MyEvents`, `GameEvents`, etc.).
+
+## Version History
+**⚠️ Breaking Change in version 1.2.0**:
+- **Scheduler Access**: Previously, each module had its own `{ModuleName}EventScheduler` module. Now, all modules share a single `ModuleEventScheduler` class, accessed via the `EventScheduler` property on each module.
+- **Code Migration**: Replace `{ModuleName}EventScheduler.ScheduleEventAction(...)` with `{ModuleName}.EventScheduler.ScheduleEventAction(...)` (see [Migration Guide](#migration-guide-version-11x--120) at the bottom of the documentation)
+
+**New in version 1.2.3**:
+- **Stable FIFO ordering within same priority** - Events scheduled with equal priority values now reliably execute in the order they were added (previously relied on LINQ's unstable sort)
+- **`ModuleEventScheduler` data structure refinement** - Switched from `Queue(Of EventItem)` to `List(Of EventItem)` with a monotonic `Order` field for semantically correct priority-plus-order sorting
+- **Explicit `System.Linq` import** - The generated `ModuleEventScheduler` now explicitly imports the `System.Linq` namespace for consistent compilation across all project types
+- **Race-condition-safe weak references in `WeakMulticastEvent`** - Replaced the old non-generic `WeakReference` with `WeakReference(Of TDelegate)`, using `TryGetTarget()` instead of the broken `IsAlive` → `Target` pattern
+- **NullReferenceException fix in `WeakMulticastEvent.RemoveHandler`** - Now uses the `HandlerEntry` struct with `MethodInfo` + target tracking for reliable matching
+- **`ActiveHandlerCount` no longer mutates state** - Property getter previously called `RemoveAll()` inside the lock; now purely counts live handlers without side effects
+- **`RemoveDeadHandlers()` public method** - Explicit API for scavenging handlers whose targets have been garbage collected
+- **Null guard on `RemoveHandler(Nothing)`** - No longer throws unexpectedly when called with a null handler
+- **Better delegate matching** - The new `HandlerEntry` struct compares both `MethodInfo` and target object for accurate handler removal
+
+**New in version 1.2.5**:
+- **Added missing namespace imports** - Ensures generated code compiles even when `System.Threading.Tasks` is not explicitly imported. If you are targeting a legacy framework or have removed `System.Linq` and `System.Threading.Tasks` from your project-level imports, upgrade to 1.2.5 and reload your project to regenerate the source.
+  > **Note**: If you cannot upgrade to 1.2.5, configure your project-level imports on your legacy VB.NET projects:
+  > ```xml
+  > <ItemGroup>
+  >   <Import Include="System.Threading.Tasks" />
+  >   <Import Include="System.Linq" />
+  > </ItemGroup>
+  > ```
+- **Removed the `_nextOrder` field from `ModuleEventScheduler`** - This field was unnecessary and could increase memory usage. The scheduler now preserves ordering using the current `_pendingEvents.Count`, reducing allocations while keeping stable priority-based execution.
+
+**New in version 1.2.4**:
+- **Critical `Friend Event` handling bug fix** - Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations
+
+**Existing features from version 1.1.x**: 
+- **Module Accessibility Support**: Automatically detects and preserves module accessibility levels (Public/Friend)
+- **Priority-based event scheduling** - control the order events are raised with priority values
+- **Enhanced asynchronous methods** - add optional delays to async event raising
+- **Improved parameter documentation** - better XML documentation for generated methods
+- **Delegate pattern detection** - supports both traditional parameter lists and delegate-based events like `As EventHandler`
+- **Multiple event module support** - resolves ambiguity in method calls and supports multiple event modules like `GameEvents`, `UIEvents`, `AudioEvents` and more
+- **Improved Parameter Validation** - uses `NameOf(withDelaySec)` for user-friendly exception messages
 
 ## License
 This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
