@@ -12,40 +12,41 @@ Imports System.Collections.Generic
 Imports System.Linq
 
 ''' <summary>
-''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
+''' Provides a unified event scheduling mechanism for modules, allowing events to be deferred until a later time.
 ''' </summary>
 ''' <remarks>
 ''' <para>
-''' This class is particularly useful in game development frameworks (MonoGame, FNA, Unity, etc.) 
-''' where raising events during the update phase can cause performance issues or race conditions.
-''' By scheduling events to be raised later (typically during the draw phase), you can maintain
-''' consistent frame rates and ensure thread-safe event handling.
+''' This class is especially useful in game development frameworks such as MonoGame, FNA, and Unity,
+''' where raising events during the update phase can lead to performance issues or race conditions.
+''' By scheduling events for later execution, typically during the draw phase, you can keep frame rates
+''' stable and make event handling more predictable.
 ''' </para>
 ''' <para>
-''' <b>Priority System:</b> Events can be scheduled with different priority values. Higher priority
-''' events are raised first. Events with the same priority are raised in first-in-first-out (FIFO) order.
+''' <b>Priority System:</b> Events can be scheduled with different priority values. Higher-priority
+''' events are raised first. When multiple events share the same priority, they are raised in
+''' first-in, first-out (FIFO) order.
 ''' </para>
 ''' <para>
-''' <b>Thread Safety:</b> All methods in this class are thread-safe and can be called from any thread.
+''' <b>Thread Safety:</b> All methods in this class are thread-safe and may be called from any thread.
 ''' </para>
 ''' <para>
 ''' <b>Usage Example:</b>
 ''' <code lang=""vb"">
-''' ' Schedule an event with default priority, using a wrapped RaiseEvent method
-''' EventScheduler.ScheduleEvent(
-'''     Sub() 
+''' ' Schedule an event with the default priority by wrapping a RaiseEvent call
+''' EventScheduler.ScheduleEventAction(
+'''     Sub()
 '''         Debug.WriteLine($""[ModuleEventScheduler] MyEvent raised with args: {{arg1}}, {{arg2}}"")
 '''         RaiseEvent_MyEvent(arg1, arg2)
 '''     End Sub)
 '''
-''' ' Schedule a high-priority event with similar logic
-''' EventScheduler.ScheduleEvent(
-'''     Sub() 
+''' ' Schedule a high-priority event in the same way
+''' EventScheduler.ScheduleEventAction(
+'''     Sub()
 '''         Debug.WriteLine($""[ModuleEventScheduler] CriticalEvent raised with data: {{data}}"")
 '''         RaiseEvent_CriticalEvent(data)
 '''     End Sub, priorityValue:=10)
 '''
-''' ' Later, typically in the `Draw` phase within the game framework:
+''' ' Later, typically during the Draw phase in the game framework:
 ''' EventScheduler.RaiseScheduledEvents()
 ''' </code>
 ''' </para>
@@ -54,9 +55,9 @@ Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
         Public ReadOnly [Event] As Action
         Public ReadOnly Priority As Integer
-        Public ReadOnly Order As Long
+        Public ReadOnly Order As Integer
 
-        Public Sub New([event] As Action, priority As Integer, order As Long)
+        Public Sub New([event] As Action, priority As Integer, order As Integer)
             Me.Event = [event]
             Me.Priority = priority
             Me.Order = order
@@ -65,30 +66,30 @@ Public NotInheritable Class ModuleEventScheduler
 
     Private ReadOnly _pendingEvents As New List(Of EventItem)
     Private ReadOnly _lock As New Object
-    Private _nextOrder As Long
 
     ''' <summary>
-    ''' Schedules an event action to be raised later with an optional priority value.
+    ''' Schedules an event action for later execution with an optional priority value.
     ''' </summary>
     ''' <param name=""eventAction"">The event action to schedule. This is typically a lambda that raises an event.</param>
-    ''' <param name=""priorityValue"">The priority value of the event (default is 0).
-    ''' Events with higher priority values are raised first. Events with the same priority are raised in FIFO order.</param>
+    ''' <param name=""priorityValue"">The priority value for the event (default value: 0).
+    ''' Higher-priority events are raised first. When multiple events share the same priority,
+    ''' they are raised in FIFO order.</param>
     ''' <exception cref=""ArgumentNullException"">Thrown when <paramref name=""eventAction""/> is null.</exception>
     ''' <remarks>
-    ''' This method is thread-safe and can be called from any thread. The scheduled event will be
-    ''' raised when <see cref=""RaiseScheduledEvents""/> is called.
+    ''' This method is thread-safe and may be called from any thread. The scheduled event will be
+    ''' raised when <see cref=""RaiseScheduledEvents""/> is invoked.
     ''' </remarks>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
         ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
-            _pendingEvents.Add(New EventItem(eventAction, priorityValue, _nextOrder))
-            _nextOrder += 1
+            _pendingEvents.Add(New EventItem(eventAction, priorityValue, _pendingEvents.Count))
         End SyncLock
     End Sub
 
     ''' <summary>
     ''' Raises all scheduled event actions in priority order.
     ''' </summary>
+    ''' <param name=""loggerAction"">An optional action to log exceptions that occur while raising events.</param>
     ''' <remarks>
     ''' <para>
     ''' This method is thread-safe and should be called during a phase where event handling is safe,
@@ -106,7 +107,7 @@ Public NotInheritable Class ModuleEventScheduler
     ''' multiple times; each call will raise all events that were scheduled since the last call.
     ''' </para>
     ''' </remarks>
-    Public Sub RaiseScheduledEvents()
+    Public Sub RaiseScheduledEvents(Optional loggerAction As Action(Of Exception) = Nothing)
         Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
@@ -115,17 +116,24 @@ Public NotInheritable Class ModuleEventScheduler
                              Select evt.Event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
-        ' Raise all events outside the lock to avoid deadlocks
-        Array.ForEach(actionsToRaise, Sub(atn) atn.Invoke())
+
+        ' Raise all events outside the lock with exception handling/logging
+        For Each atn As Action In actionsToRaise
+            Try
+                atn.Invoke()
+            Catch ex As Exception
+                loggerAction?.Invoke(ex)
+            End Try
+        Next atn
     End Sub
 
     ''' <summary>
-    ''' Gets the number of pending events currently scheduled to be raised.
+    ''' Gets the number of events that are currently pending execution.
     ''' </summary>
     ''' <value>The number of pending events.</value>
     ''' <remarks>
-    ''' This property is thread-safe and can be called from any thread. It can be useful for
-    ''' debugging or for implementing logic that depends on the number of pending events.
+    ''' This property is thread-safe and may be called from any thread. It can be useful for debugging
+    ''' or for implementing logic that depends on the current number of pending events.
     ''' </remarks>
     Public ReadOnly Property PendingEventCount As Integer
         Get
@@ -139,9 +147,9 @@ Public NotInheritable Class ModuleEventScheduler
     ''' Clears all scheduled events without raising them.
     ''' </summary>
     ''' <remarks>
-    ''' This method is thread-safe and can be called from any thread. Use this method when you
-    ''' need to cancel all pending events, such as during scene transitions or when resetting
-    ''' game state. After calling this method, <see cref=""PendingEventCount""/> will be zero.
+    ''' This method is thread-safe and may be called from any thread. Use it when you need to cancel
+    ''' all pending events, such as during scene transitions or when resetting game state. After calling
+    ''' this method, <see cref=""PendingEventCount""/> will be zero.
     ''' </remarks>
     Public Sub ClearScheduledEvents()
         SyncLock _lock
@@ -164,15 +172,15 @@ Imports System.Linq
 Imports System.Linq.Expressions
 
 ''' <summary>
-''' Provides a thread-safe collection of weak-referenced event handlers that can be invoked
-''' without preventing the handler targets from being garbage collected.
+''' Provides a thread-safe collection of weakly referenced event handlers that can be invoked
+''' without preventing their targets from being garbage collected.
 ''' </summary>
-''' <typeparam name=""TDelegate"">The type of delegate to manage (must be a Delegate type).</typeparam>
+''' <typeparam name=""TDelegate""><![CDATA[The type of delegate to manage. It must be a delegate type.]]></typeparam>
 ''' <remarks>
 ''' <para>
-''' This class is designed to solve memory leak issues in event-driven architectures where
-''' long-lived objects subscribe to events from short-lived objects. By using weak references,
-''' the subscriber can be garbage collected even if the publisher remains alive.
+''' This class is designed to help prevent memory leaks in event-driven architectures where long-lived
+''' objects subscribe to events raised by shorter-lived objects. By using weak references, the subscriber
+''' can still be garbage collected even if the publisher remains alive.
 ''' </para>
 ''' <para>
 ''' <b>Thread Safety:</b> All methods in this class are thread-safe and can be called from any thread.
@@ -241,14 +249,14 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     Private Shared ReadOnly _invoker As Action(Of TDelegate, Object()) = CreateInvokeAction()
 
     ''' <summary>
-    ''' Adds a weak reference to an event handler.
+    ''' Adds a weakly referenced event handler.
     ''' </summary>
-    ''' <param name=""handler"">The event handler to add (must be a Delegate type).</param>
-    ''' <exception cref=""ArgumentNullException"">Thrown when <paramref name=""handler""/> is Nothing.</exception>
-    ''' <exception cref=""ArgumentException"">Thrown when <paramref name=""handler""/> is not a Delegate type.</exception>
+    ''' <param name=""handler""><![CDATA[The event handler to add. It must be a delegate type.]]></param>
+    ''' <exception cref=""ArgumentNullException""><![CDATA[Thrown when <paramref name=""handler""/> is Nothing.]]></exception>
+    ''' <exception cref=""ArgumentException""><![CDATA[Thrown when <paramref name=""handler""/> is not a delegate type.]]></exception>
     ''' <remarks>
-    ''' Removes dead handlers from the collection before adding the new handler. This helps
-    ''' keep the collection clean and efficient.
+    ''' Dead handlers are removed from the collection before the new handler is added, helping to keep
+    ''' the collection clean and efficient.
     ''' </remarks>
     Public Sub [AddHandler](handler As TDelegate)
         ArgumentNullException.ThrowIfNull(handler)
@@ -266,8 +274,8 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     ''' </summary>
     ''' <param name=""handler"">The event handler to remove.</param>
     ''' <remarks>
-    ''' Removes both the specified handler (if present) and any dead handlers from the collection.
-    ''' If the handler is not found, no action is taken.
+    ''' This removes the specified handler when present and also removes any dead handlers from the
+    ''' collection. If the handler is not found, no action is taken.
     ''' </remarks>
     Public Sub [RemoveHandler](handler As TDelegate)
         If handler Is Nothing Then Exit Sub
@@ -283,16 +291,16 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     End Sub
 
     ''' <summary>
-    ''' Raises the event by invoking all alive handlers with the specified arguments.
+    ''' Raises the event by invoking all live handlers with the specified arguments.
     ''' </summary>
-    ''' <param name=""args"">The arguments to pass to the event handlers.</param>
+    ''' <param name=""args""><![CDATA[The arguments to pass to the event handlers.]]></param>
     ''' <remarks>
     ''' <para>
-    ''' Removes dead handlers from the collection before invoking the live ones. This ensures
-    ''' only active handlers are invoked and keeps the collection efficient.
+    ''' Dead handlers are removed from the collection before the live handlers are invoked, ensuring that
+    ''' only active handlers are called and keeping the collection efficient.
     ''' </para>
     ''' <para>
-    ''' Uses compiled expression trees for strongly-typed invocation, which is significantly
+    ''' The implementation uses compiled expression trees for strongly typed invocation, which is significantly
     ''' faster than <see cref=""[Delegate].DynamicInvoke""/>.
     ''' </para>
     ''' </remarks>
@@ -316,12 +324,12 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     End Sub
 
     ''' <summary>
-    ''' Gets the number of active (alive) event handlers in the collection.
+    ''' Gets the number of active event handlers in the collection.
     ''' </summary>
     ''' <value>The number of active event handlers.</value>
     ''' <remarks>
-    ''' This property is thread-safe and can be called from any thread. It counts only
-    ''' handlers whose targets are still reachable by the garbage collector.
+    ''' This property is thread-safe and may be called from any thread. It counts only handlers whose
+    ''' targets are still reachable by the garbage collector.
     ''' </remarks>
     Public ReadOnly Property ActiveHandlerCount As Integer
         Get
@@ -337,11 +345,11 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     End Property
 
     ''' <summary>
-    ''' Removes all event handlers from the collection, regardless of whether they are alive or not.
+    ''' Removes all event handlers from the collection, whether they are alive or dead.
     ''' </summary>
     ''' <remarks>
-    ''' This method is thread-safe and can be called from any thread. After calling this method,
-    ''' <see cref=""ActiveHandlerCount""/> will be zero.
+    ''' This method is thread-safe and may be called from any thread. After calling it,
+    ''' <see cref=""ActiveHandlerCount""/> will return zero.
     ''' </remarks>
     Public Sub Clear()
         SyncLock _lock
@@ -350,12 +358,11 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     End Sub
 
     ''' <summary>
-    ''' Scavenges handlers whose targets have been garbage collected.
+    ''' Removes handlers whose targets have already been garbage collected.
     ''' </summary>
     ''' <remarks>
-    ''' This method is thread-safe and can be called from any thread. It is useful for
-    ''' keeping the internal collection clean when handlers are not actively being added
-    ''' or removed.
+    ''' This method is thread-safe and may be called from any thread. It is useful for keeping the
+    ''' internal collection clean when handlers are not being added or removed actively.
     ''' </remarks>
     Public Sub RemoveDeadHandlers()
         SyncLock _lock
@@ -376,10 +383,10 @@ Public NotInheritable Class WeakMulticastEvent(Of TDelegate As Class)
     End Sub
 
     ''' <summary>
-    ''' Creates a strongly-typed invocation delegate for the specified delegate type.
+    ''' Creates a strongly typed invocation delegate for the specified delegate type.
     ''' </summary>
     ''' <returns>An action that invokes the delegate with the specified arguments.</returns>
-    ''' <exception cref=""InvalidOperationException"">Thrown if the delegate type does not have an Invoke method.</exception>
+    ''' <exception cref=""InvalidOperationException""><![CDATA[Thrown when the delegate type does not expose an Invoke method.]]></exception>
     Private Shared Function CreateInvokeAction() As Action(Of TDelegate, Object())
         Dim delegateType = GetType(TDelegate)
         Dim invokeMethod = delegateType.GetMethod(""Invoke"")

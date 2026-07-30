@@ -332,10 +332,12 @@ DefaultCase:            Dim desc As String = pInfo.ParamName
         code.AppendLine("Option Strict On")
         code.AppendLine()
 
-        Dim namespaces = modInfo.RequiredNamespaces
+        Dim namespaces = If(modInfo.RequiredNamespaces, New List(Of String))
+        If Not namespaces.Contains("System.Threading.Tasks") Then namespaces.Add("System.Threading.Tasks")
+
         ' Add collected namespaces (sorted for consistency)
-        If namespaces IsNot Nothing AndAlso namespaces.Count > 0 Then
-            For Each ns As String In From x In namespaces Order By x
+        If namespaces.Count > 0 Then
+            For Each ns As String In From x In namespaces Order By x Distinct
                 code.AppendLine($"Imports {ns}")
             Next ns
         End If
