@@ -183,7 +183,7 @@ Public NotInheritable Class EventRaiserGen
         context.RegisterPostInitializationOutput(
             Sub(ctx) ctx.AddSource("ModuleEventScheduler.g.vb", EVENT_SCHEDULER_CLASSDEF))
 
-        ' Experimental in version 1.2.2: Weak multicast event support
+        ' Improved in version 1.2.3+: Weak multicast event support
         context.RegisterPostInitializationOutput(
             Sub(ctx) ctx.AddSource("WeakMulticastEvent.g.vb", WEAK_EVENT_CLASSDEF))
 

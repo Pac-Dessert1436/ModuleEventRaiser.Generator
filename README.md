@@ -3,16 +3,16 @@ A lightweight VB.NET source generator that automatically creates **RaiseEvent** 
 
 The source generator is **enterprise-ready and fully compatible with `Option Infer Off`**, making it suitable for healthcare, financial, and other regulated industries with strict coding standards. _Memory management for strong event references is explained in [Important Notes on This Package](https://github.com/Pac-Dessert1436/ModuleEventRaiser.Generator#important-notes-on-this-package) in the GitHub docs._
 
-> **v1.2.4-1.2.5 Updates**: Fixed a hidden bug in the source generator's `Friend Event` handling path by preserving the intended `Friend` accessibility in generated event trigger methods. The current version (1.2.5) includes reliability and performance enhancements.
+> **v1.2.4-1.2.5.1 Updates**: Fixed a hidden bug in the source generator's `Friend Event` handling path by preserving the intended `Friend` accessibility in generated event trigger methods. The current version includes reliability and performance enhancements, together with **more robust error handling**.
 >
 > **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture. Each module now has an `EventScheduler` property instead of a separate scheduler module. Cleaner design, better encapsulation, same powerful functionality. See [Breaking Change in v1.2.0](#breaking-change-in-v120).
 
-## 📦 Version Notes: 1.2.3 → 1.2.5
+## 📦 Version Notes: 1.2.3 → 1.2.5.1
 
-### v1.2.5: Reliable Builds, Efficient Scheduler
+### v1.2.5.1: Reliable Builds, Efficient Scheduler
 
 - **Added missing namespace imports** - Ensures generated code compiles even when `System.Threading.Tasks` is not explicitly imported. _If you are targeting a legacy framework or have removed `System.Linq` and `System.Threading.Tasks` from your project-level imports, upgrade to 1.2.5 and reload your project to regenerate the source._
-> **Note**: If you cannot upgrade to 1.2.5, configure your project-level imports on your legacy VB.NET projects:
+> **Note**: If you cannot upgrade to 1.2.5.1, configure your project-level imports on your legacy VB.NET projects:
 > ```xml
 > <ItemGroup>
 >   <Import Include="System.Threading.Tasks" />
@@ -20,6 +20,7 @@ The source generator is **enterprise-ready and fully compatible with `Option Inf
 > </ItemGroup>
 > ```
 - **Removed the `_nextOrder` field from `ModuleEventScheduler`** - This field was unnecessary and could increase memory usage. The scheduler now preserves ordering using the current `_pendingEvents.Count`, reducing allocations while keeping stable priority-based execution.
+- **More robust error handling in `ModuleEventScheduler`** - Improved exception logging and tracing in the `RaiseScheduledEvents` method to help diagnose and resolve issues more effectively. _The previous version (1.2.5) has been deprecated, because `loggerAction?.Invoke(ex)` can swallow exceptions silently when `loggerAction` is not provided._
 
 ### v1.2.4: `Friend Event` Accessibility Fix
 
@@ -209,13 +210,14 @@ Partial Public Module MyEvents
 End Module
 ```
 
-### Unified event scheduler class (Enhanced in v1.2.5)
+### Unified event scheduler class (Enhanced in v1.2.5.1)
 ```vb
 Option Explicit On
 Option Strict On
 Imports System
 Imports System.Collections.Generic
 Imports System.Linq
+Imports System.Diagnostics
 
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, allowing events to be deferred until a later time.
@@ -293,7 +295,7 @@ Public NotInheritable Class ModuleEventScheduler
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions in priority order.
+    ''' Raises all scheduled event actions in priority order. Exceptions will be logged or traced if any event action fails.
     ''' </summary>
     ''' <param name="loggerAction">An optional action to log exceptions that occur while raising events.</param>
     ''' <remarks>
@@ -323,12 +325,19 @@ Public NotInheritable Class ModuleEventScheduler
             _pendingEvents.Clear()
         End SyncLock
 
-        ' Raise all events outside the lock with exception handling/logging
+        ' Raise all events outside the lock with exception handling/logging.
+        ' If `loggerAction` is provided, use it to log exceptions.
+        ' Otherwise, trace the error and stop the process if attached.
         For Each atn As Action In actionsToRaise
             Try
                 atn.Invoke()
             Catch ex As Exception
-                loggerAction?.Invoke(ex)
+                If loggerAction IsNot Nothing Then
+                    loggerAction.Invoke(ex)
+                Else
+                    Trace.TraceError(ex.ToString())
+                    If Debugger.IsAttached Then Stop
+                End If
             End Try
         Next atn
     End Sub
