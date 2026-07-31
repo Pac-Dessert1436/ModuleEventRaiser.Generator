@@ -1,13 +1,13 @@
 # `ModuleEventRaiser.Generator` - An Event Raiser Generator for VB.NET Modules
 
-> **Version 1.2.5 (Latest)**: A reliability and performance release that adds missing namespace imports for guaranteed compilation on legacy projects and removes an unnecessary field from the scheduler.
+> **Version 1.2.5.1 (Latest)**: A reliability and performance release that adds missing namespace imports for guaranteed compilation on legacy projects and removes an unnecessary field from the scheduler. This version also introduces a `loggerAction` parameter to the `RaiseScheduledEvents` method, along with graceful exception handling/traceback.
 >
 > **v1.2.0**: ⚠️ **BREAKING CHANGE** - Unified event scheduler architecture! Each module now has an `EventScheduler` property instead of separate scheduler modules. Cleaner design, better encapsulation, same powerful functionality.
 
 ## Description
 `ModuleEventRaiser.Generator` is a .NET source generator that automatically creates event raiser methods for events declared in VB.NET modules. It helps developers to raise events in a consistent, efficient, and well-documented manner, reducing boilerplate code and improving code readability. **Key points regarding memory management** with events are now included in this section: [Important Notes on This Package](#important-notes-on-this-package).
 
-Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.5`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards. _For more information on prior versions of this package, see [Version History](#version-history) at the end of this documentation._
+Currently available as a NuGet package: `dotnet add package ModuleEventRaiser.Generator --version 1.2.5.1`. **Enterprise-ready and fully compatible with `Option Infer Off`** - making it perfect for healthcare, financial, and other regulated industries with strict coding standards. _For more information on prior versions of this package, see [Version History](#version-history) at the end of this documentation._
 
 ## Important Notes on This Package
 ### ⚠️ Critical: Memory Management with Events
@@ -48,14 +48,18 @@ End Class
 ```
 **Why this matters**: The package does NOT contain methods that automatically remove event handlers. NEITHER would the native `Handles` keyword in VB.NET automatically do so. *__Without proper cleanup, especially when the event publishers are long-lived in your VB.NET app, the memory leak will definitely take place.__*
 
-### Exception Handling in `RaiseScheduledEvents` Method (Available in v1.2.5)
+### Exception Handling in `RaiseScheduledEvents` Method (Available in v1.2.5.1)
 
-Starting with v1.2.5, the `RaiseScheduledEvents` method (in the `ModuleEventScheduler` class) supports optional exception handling. You can pass a logger callback to catch and log any exceptions thrown during event processing. The method will continue raising remaining events even if one of them fails, ensuring that a single faulty handler does not block the rest. Example usage:
+Starting with v1.2.5.1, the `RaiseScheduledEvents` method (in the `ModuleEventScheduler` class) supports optional exception handling. You can pass a logger callback to catch and log any exceptions thrown during event processing. The method will continue raising remaining events even if one of them fails, ensuring that a single faulty handler does not block the rest. 
+
+**Example usage:**
 ``` vb
 EventScheduler.RaiseScheduledEvents(
     loggerAction:=Sub(ex As Exception) Debug.WriteLine($"Error raising event: {ex.Message}")
 )
 ```
+
+> **Note**: If `loggerAction` is not provided, the program will be `Stop`ped with error traceback. This feature was not available in previous versions.
 
 ### Other Notes
 - The source generator only works with VB.NET modules and does not support classes or structures.
@@ -99,7 +103,7 @@ EventScheduler.RaiseScheduledEvents(
 - **Race-Condition-Safe Weak References (Version 1.2.3)**: Uses `WeakReference(Of T).TryGetTarget()` for reliable handler tracking, with `HandlerEntry` struct for accurate delegate matching
 - **Explicit `System.Linq` Import (Version 1.2.3)**: Generated `ModuleEventScheduler` now explicitly imports `System.Linq` for consistent compilation across all project types
 - **Critical `Friend Event` Handling Fix (Version 1.2.4)**: Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations. _Prior versions of the source generator incorrectly used `Internal` that doesn't exist in VB.NET._
-- **Reliable Builds & Efficient Scheduler (Version 1.2.5)**: Added missing namespace imports for guaranteed compilation on legacy projects and removed the unnecessary `_nextOrder` field from `ModuleEventScheduler` to reduce memory allocations.
+- **Reliable Builds & Efficient Scheduler (Version 1.2.5.1)**: Added missing namespace imports for guaranteed compilation on legacy projects and removed the unnecessary `_nextOrder` field from `ModuleEventScheduler` to reduce memory allocations. This version also introduced a `loggerAction` parameter to the `RaiseScheduledEvents`, along with graceful exception handling/traceback without swallowing exceptions.
 
 ## Prerequisites
 - [Visual Studio 2026](https://visualstudio.microsoft.com/vs/)
@@ -127,9 +131,9 @@ EventScheduler.RaiseScheduledEvents(
     ```
 4. You can also **install the source generator via NuGet** - no manual configuration required:
    ```bash
-   dotnet add package ModuleEventRaiser.Generator --version 1.2.5
+   dotnet add package ModuleEventRaiser.Generator --version 1.2.5.1
    ```
-   - Version 1.2.5 adds missing namespace imports for guaranteed compilation on legacy projects and removes the unnecessary `_nextOrder` field from the scheduler.
+   - Version 1.2.5.1 adds missing namespace imports for guaranteed compilation on legacy projects and removes the unnecessary `_nextOrder` field from the scheduler. _The previous version (1.2.5) has been **deprecated** for swallowing exceptions in the `RaiseScheduledEvents` method of the `ModuleEventScheduler` class._
 
 ## Example Usage
 
@@ -305,48 +309,57 @@ Partial Public Module MyEvents
 End Module
 ```
 
-### New in 1.2.0: Unified event scheduler class in `ModuleEventScheduler.vb` (Updated in v1.2.3)
+### Unified event scheduler class in `ModuleEventScheduler.vb` (Enhanced in v1.2.5.1)
 ```vb
+' <auto-generated>
+'     This code was generated by `ModuleEventRaiser.Generator`.
+'     Changes to this file may cause incorrect behavior and will be lost if
+'     the code is regenerated.
+' </auto-generated>
+
 Option Explicit On
 Option Strict On
-
 Imports System
 Imports System.Collections.Generic
 Imports System.Linq
+Imports System.Diagnostics
 
 ''' <summary>
-''' Provides a unified event scheduling mechanism for modules, enabling deferred event execution.
+''' Provides a unified event scheduling mechanism for modules, allowing events to be deferred until a later time.
 ''' </summary>
 ''' <remarks>
 ''' <para>
-''' This class is particularly useful in game development frameworks (MonoGame, FNA, Unity, etc.) 
-''' where raising events during the update phase can cause performance issues or race conditions.
-''' By scheduling events to be raised later (typically during the draw phase), you can maintain
-''' consistent frame rates and ensure thread-safe event handling.
+''' This class is especially useful in game development frameworks such as MonoGame, FNA, and Unity,
+''' where raising events during the update phase can lead to performance issues or race conditions.
+''' By scheduling events for later execution, typically during the draw phase, you can keep frame rates
+''' stable and make event handling more predictable.
 ''' </para>
 ''' <para>
-''' <b>Priority System:</b> Events can be scheduled with different priority values. Higher priority
-''' events are raised first. Events with the same priority are raised in first-in-first-out (FIFO) order.
+''' <b>Priority System:</b> Events can be scheduled with different priority values. Higher-priority
+''' events are raised first. When multiple events share the same priority, they are raised in
+''' first-in, first-out (FIFO) order.
 ''' </para>
 ''' <para>
-''' <b>Thread Safety:</b> All methods in this class are thread-safe and can be called from any thread.
+''' <b>Thread Safety:</b> All methods in this class are thread-safe and may be called from any thread.
 ''' </para>
 ''' <para>
 ''' <b>Usage Example:</b>
-''' <code lang="vb">
-''' ' Schedule an event with default priority, using a wrapped RaiseEvent method
+''' <code lang=""vb"">
+''' ' Schedule an event with the default priority by wrapping a RaiseEvent call
 ''' EventScheduler.ScheduleEventAction(
-'''     Sub() 
+'''     Sub()
 '''         Debug.WriteLine($""[ModuleEventScheduler] MyEvent raised with args: {{arg1}}, {{arg2}}"")
 '''         RaiseEvent_MyEvent(arg1, arg2)
 '''     End Sub)
-''' ' Schedule a high-priority event with similar logic
+'''
+''' ' Schedule a high-priority event in the same way
 ''' EventScheduler.ScheduleEventAction(
-'''     Sub() 
+'''     Sub()
 '''         Debug.WriteLine($""[ModuleEventScheduler] CriticalEvent raised with data: {{data}}"")
 '''         RaiseEvent_CriticalEvent(data)
 '''     End Sub, priorityValue:=10)
-''' ' Later, typically in the `Draw` phase within the game framework:
+'''
+''' ' Later, typically during the Draw phase in the game framework:
 ''' EventScheduler.RaiseScheduledEvents()
 ''' </code>
 ''' </para>
@@ -355,9 +368,9 @@ Public NotInheritable Class ModuleEventScheduler
     Private Structure EventItem
         Public ReadOnly [Event] As Action
         Public ReadOnly Priority As Integer
-        Public ReadOnly Order As Long
+        Public ReadOnly Order As Integer
 
-        Public Sub New([event] As Action, priority As Integer, order As Long)
+        Public Sub New([event] As Action, priority As Integer, order As Integer)
             Me.Event = [event]
             Me.Priority = priority
             Me.Order = order
@@ -366,30 +379,30 @@ Public NotInheritable Class ModuleEventScheduler
 
     Private ReadOnly _pendingEvents As New List(Of EventItem)
     Private ReadOnly _lock As New Object
-    Private _nextOrder As Long
 
     ''' <summary>
-    ''' Schedules an event action to be raised later with an optional priority value.
+    ''' Schedules an event action for later execution with an optional priority value.
     ''' </summary>
-    ''' <param name="eventAction">The event action to schedule. This is typically a lambda that raises an event.</param>
-    ''' <param name="priorityValue">The priority value of the event (default is 0).
-    ''' Events with higher priority values are raised first. Events with the same priority are raised in FIFO order.</param>
-    ''' <exception cref="ArgumentNullException">Thrown when <paramref name="eventAction"/> is null.</exception>
+    ''' <param name=""eventAction"">The event action to schedule. This is typically a lambda that raises an event.</param>
+    ''' <param name=""priorityValue"">The priority value for the event (default value: 0).
+    ''' Higher-priority events are raised first. When multiple events share the same priority,
+    ''' they are raised in FIFO order.</param>
+    ''' <exception cref=""ArgumentNullException"">Thrown when <paramref name=""eventAction""/> is null.</exception>
     ''' <remarks>
-    ''' This method is thread-safe and can be called from any thread. The scheduled event will be
-    ''' raised when <see cref="RaiseScheduledEvents"/> is called.
+    ''' This method is thread-safe and may be called from any thread. The scheduled event will be
+    ''' raised when <see cref=""RaiseScheduledEvents""/> is invoked.
     ''' </remarks>
     Public Sub ScheduleEventAction(eventAction As Action, Optional priorityValue As Integer = 0)
         ArgumentNullException.ThrowIfNull(eventAction)
         SyncLock _lock
-            _pendingEvents.Add(New EventItem(eventAction, priorityValue, _nextOrder))
-            _nextOrder += 1
+            _pendingEvents.Add(New EventItem(eventAction, priorityValue, _pendingEvents.Count))
         End SyncLock
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions in priority order.
+    ''' Raises all scheduled event actions in priority order. Exceptions will be logged or traced if any event action fails.
     ''' </summary>
+    ''' <param name=""loggerAction"">An optional action to log exceptions that occur while raising events.</param>
     ''' <remarks>
     ''' <para>
     ''' This method is thread-safe and should be called during a phase where event handling is safe,
@@ -397,7 +410,7 @@ Public NotInheritable Class ModuleEventScheduler
     ''' </para>
     ''' <para>
     ''' Events are raised in the following order:
-    ''' <list type="number">
+    ''' <list type=""number"">
     ''' <item><description>Events with higher priority values are raised first</description></item>
     ''' <item><description>Events within the same priority level are raised in FIFO order</description></item>
     ''' </list>
@@ -407,7 +420,7 @@ Public NotInheritable Class ModuleEventScheduler
     ''' multiple times; each call will raise all events that were scheduled since the last call.
     ''' </para>
     ''' </remarks>
-    Public Sub RaiseScheduledEvents()
+    Public Sub RaiseScheduledEvents(Optional loggerAction As Action(Of Exception) = Nothing)
         Dim actionsToRaise As Action() = Array.Empty(Of Action)()
         SyncLock _lock
             If _pendingEvents.Count = 0 Then Exit Sub
@@ -416,17 +429,31 @@ Public NotInheritable Class ModuleEventScheduler
                              Select evt.Event Into ToArray()
             _pendingEvents.Clear()
         End SyncLock
-        ' Raise all events outside the lock to avoid deadlocks
-        Array.ForEach(actionsToRaise, Sub(atn) atn.Invoke())
+
+        ' Raise all events outside the lock with exception handling/logging.
+        ' If `loggerAction` is provided, use it to log exceptions.
+        ' Otherwise, trace the error and stop the process if attached.
+        For Each atn As Action In actionsToRaise
+            Try
+                atn.Invoke()
+            Catch ex As Exception
+                If loggerAction IsNot Nothing Then
+                    loggerAction.Invoke(ex)
+                Else
+                    Trace.TraceError(ex.ToString())
+                    If Debugger.IsAttached Then Stop
+                End If
+            End Try
+        Next atn
     End Sub
 
     ''' <summary>
-    ''' Gets the number of pending events currently scheduled to be raised.
+    ''' Gets the number of events that are currently pending execution.
     ''' </summary>
     ''' <value>The number of pending events.</value>
     ''' <remarks>
-    ''' This property is thread-safe and can be called from any thread. It can be useful for
-    ''' debugging or for implementing logic that depends on the number of pending events.
+    ''' This property is thread-safe and may be called from any thread. It can be useful for debugging
+    ''' or for implementing logic that depends on the current number of pending events.
     ''' </remarks>
     Public ReadOnly Property PendingEventCount As Integer
         Get
@@ -440,9 +467,9 @@ Public NotInheritable Class ModuleEventScheduler
     ''' Clears all scheduled events without raising them.
     ''' </summary>
     ''' <remarks>
-    ''' This method is thread-safe and can be called from any thread. Use this method when you
-    ''' need to cancel all pending events, such as during scene transitions or when resetting
-    ''' game state. After calling this method, <see cref="PendingEventCount"/> will be zero.
+    ''' This method is thread-safe and may be called from any thread. Use it when you need to cancel
+    ''' all pending events, such as during scene transitions or when resetting game state. After calling
+    ''' this method, <see cref=""PendingEventCount""/> will be zero.
     ''' </remarks>
     Public Sub ClearScheduledEvents()
         SyncLock _lock
@@ -693,7 +720,7 @@ Replace `{ModuleName}` with your actual module names (e.g., `MyEvents`, `GameEve
 - **Null guard on `RemoveHandler(Nothing)`** - No longer throws unexpectedly when called with a null handler
 - **Better delegate matching** - The new `HandlerEntry` struct compares both `MethodInfo` and target object for accurate handler removal
 
-**New in version 1.2.5**:
+**New in version 1.2.5.1**:
 - **Added missing namespace imports** - Ensures generated code compiles even when `System.Threading.Tasks` is not explicitly imported. If you are targeting a legacy framework or have removed `System.Linq` and `System.Threading.Tasks` from your project-level imports, upgrade to 1.2.5 and reload your project to regenerate the source.
   > **Note**: If you cannot upgrade to 1.2.5, configure your project-level imports on your legacy VB.NET projects:
   > ```xml
@@ -703,6 +730,7 @@ Replace `{ModuleName}` with your actual module names (e.g., `MyEvents`, `GameEve
   > </ItemGroup>
   > ```
 - **Removed the `_nextOrder` field from `ModuleEventScheduler`** - This field was unnecessary and could increase memory usage. The scheduler now preserves ordering using the current `_pendingEvents.Count`, reducing allocations while keeping stable priority-based execution.
+- **More robust error handling in `ModuleEventScheduler`** - Improved exception logging and tracing in the `RaiseScheduledEvents` method to help diagnose and resolve issues more effectively. _The previous version (1.2.5) has been deprecated, because `loggerAction?.Invoke(ex)` can swallow exceptions silently when `loggerAction` is not provided._
 
 **New in version 1.2.4**:
 - **Critical `Friend Event` handling bug fix** - Fixed a hidden bug in the source generator's `Friend Event` handling path that could cause compilation errors and visibility mismatches for projects using `Friend Event` declarations

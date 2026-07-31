@@ -10,6 +10,7 @@ Option Strict On
 Imports System
 Imports System.Collections.Generic
 Imports System.Linq
+Imports System.Diagnostics
 
 ''' <summary>
 ''' Provides a unified event scheduling mechanism for modules, allowing events to be deferred until a later time.
@@ -87,7 +88,7 @@ Public NotInheritable Class ModuleEventScheduler
     End Sub
 
     ''' <summary>
-    ''' Raises all scheduled event actions in priority order.
+    ''' Raises all scheduled event actions in priority order. Exceptions will be logged or traced if any event action fails.
     ''' </summary>
     ''' <param name=""loggerAction"">An optional action to log exceptions that occur while raising events.</param>
     ''' <remarks>
@@ -117,12 +118,19 @@ Public NotInheritable Class ModuleEventScheduler
             _pendingEvents.Clear()
         End SyncLock
 
-        ' Raise all events outside the lock with exception handling/logging
+        ' Raise all events outside the lock with exception handling/logging.
+        ' If `loggerAction` is provided, use it to log exceptions.
+        ' Otherwise, trace the error and stop the process if attached.
         For Each atn As Action In actionsToRaise
             Try
                 atn.Invoke()
             Catch ex As Exception
-                loggerAction?.Invoke(ex)
+                If loggerAction IsNot Nothing Then
+                    loggerAction.Invoke(ex)
+                Else
+                    Trace.TraceError(ex.ToString())
+                    If Debugger.IsAttached Then Stop
+                End If
             End Try
         Next atn
     End Sub
