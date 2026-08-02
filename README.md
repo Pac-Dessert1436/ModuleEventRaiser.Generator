@@ -59,7 +59,7 @@ EventScheduler.RaiseScheduledEvents(
 )
 ```
 
-> **Note**: If `loggerAction` is not provided, the program will be `Stop`ped with error traceback. This feature was not available in previous versions.
+> **Note**: If `loggerAction` is not provided, the program will be `Stop`ped with error traceback. This feature was not available in previous versions. _Additionally, the `Stop` keyword is short for `Debugger.Break()` and works on VB.NET class libraries as well._
 
 ### Other Notes
 - The source generator only works with VB.NET modules and does not support classes or structures.
